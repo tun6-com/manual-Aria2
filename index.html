@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+  <head>
+    <meta charset="utf-8">
+    <title>Aria2中文用户手册_用户手册_Tun6</title>
+    <meta name="keywords" content="Aria2,中文,文档,手册,说明,API,迅雷,BT,种子,下载,"/>
+    <meta name="description" content="Aria2是一个轻量级的、支持多种协议的跨平台命令行下载工具。同时支持HTTP(S)、FTP、SFTP、BitTorrent和Metalink协议。">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-ui/lib/theme-chalk/index.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror/lib/codemirror.css">
+    <link rel="stylesheet" href="./common.css">
+    <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?d5f982237a80a8b72feeaa6caac3f4fc";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+  </head>
+  <body>
+    <div id="app" class="page">
+      <el-container v-bind:style="{height: ch}">
+        <el-aside>
+          <h1>Aria2中文用户手册</h1>
+          <h3>文档大纲</h3>
+          <ul>
+            <li>基本用法</li>
+            <li><a href="./options/">配置</a></li>
+            <li><a href="./exit_status/">结束状态</a></li>
+            <li><a href="./environment/">环境</a></li>
+            <li><a href="./files/">文件</a></li>
+            <li><a href="./rpc_interface/">RPC调用</a></li>
+            <li><a href="./misc/">MISC</a></li>
+            <li><a href="./example/">例子</a></li>
+          </ul>
+        </el-aside>
+        <el-main>
+          <el-alert
+            title="须知"
+            type="warning"
+            :closable="false"
+            show-icon>
+            本文档并未完全翻译完成，我需要你的帮助。<a href="https://github.com/tun6-com/manual-Aria2" target="_blank">前往GitHub编辑</a>。
+          </el-alert>
+
+          <h1>aria2c(1)</h1>
+
+          <div id="synopsis">
+            <h2>命令定义</h2>
+            <p><strong>aria2c</strong> [&lt;OPTIONS&gt;] [&lt;URI&gt;|&lt;MAGNET&gt;|&lt;TORRENT_FILE&gt;|&lt;METALINK_FILE&gt;] ...</p>
+          </div>
+
+          <div id="description">
+            <h2>简介</h2>
+            <p>Aria2是一个轻量级的、支持多种协议的跨平台命令行下载工具。同时支持HTTP(S)、FTP、SFTP、BitTorrent和Metalink协议。
+              aria2可以从多个来源/协议下载文件，并尝试利用最大下载带宽。
+              它支持同时从HTTP(S)/FTP/SFTP和BitTorrent下载文件，而从HTTP(S)/ FTP / SFTP下载的数据上传到BitTorrent群。
+              使用Metalink块校验和，aria2在下载文件时自动验证数据块。</p>
+          </div>
+
+          <div id="see-also">
+            <h2>参见</h2>
+            <p>项目地址：<a href="https://aria2.github.io/" target="_blank">https://aria2.github.io/</a></p>
+            <p>Metalink官网：<a href="http://www.metalinker.org/" target="_blank">http://www.metalinker.org/</a></p>
+            <p>Metalink描述格式：<a href="https://tools.ietf.org/html/rfc5854.html" target="_blank"><strong>RFC 5854</strong></a></p>
+          </div>
+
+          <div id="copyright">
+            <h2>版权</h2>
+            <p>Copyright (C) 2006, 2015 Tatsuhiro Tsujikawa</p>
+            <p>This program is free software; you can redistribute it and/or modify
+              it under the terms of the GNU General Public License as published by
+              the Free Software Foundation; either version 2 of the License, or
+              (at your option) any later version.</p>
+            <p>This program is distributed in the hope that it will be useful,
+              but WITHOUT ANY WARRANTY; without even the implied warranty of
+              MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+              GNU General Public License for more details.</p>
+            <p>You should have received a copy of the GNU General Public License
+              along with this program; if not, write to the Free Software
+              Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA</p>
+            <p>In addition, as a special exception, the copyright holders give
+              permission to link the code of portions of this program with the
+              OpenSSL library under certain conditions as described in each
+              individual source file, and distribute linked combinations
+              including the two.
+              You must obey the GNU General Public License in all respects
+              for all of the code used other than OpenSSL. If you modify
+              file(s) with this exception, you may extend this exception to your
+              version of the file(s), but you are not obligated to do so. If you
+              do not wish to do so, delete this exception statement from your
+              version. If you delete this exception statement from all source
+              files in the program, then also delete it here.</p>
+          </div>
+
+        </el-main>
+      </el-container>
+
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/element-ui/lib/index.js"></script>
+    <script type="text/javascript">
+    var app = new Vue({
+      el: '#app',
+      data: {
+        ph:document.documentElement.clientHeight,
+        pw:document.documentElement.clientWidth,
+        ch:'auto',
+      },
+      mounted:function(){
+        if(this.pw>1200) this.ch=this.ph+'px';
+      },
+      methods:{
+
+      }
+    })
+    </script>
+  </body>
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+  <head>
+    <meta charset="utf-8">
+    <title>环境_Aria2_用户手册_Tun6</title>
+    <meta name="keywords" content="Aria2,配置,设置,中文,文档,手册,说明,API,"/>
+    <meta name="description" content="Aria2是一个轻量级的、支持多种协议的跨平台命令行下载工具。同时支持HTTP(S)、FTP、SFTP、BitTorrent和Metalink协议。">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-ui/lib/theme-chalk/index.css">
+    <link rel="stylesheet" href="../common.css">
+    <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?d5f982237a80a8b72feeaa6caac3f4fc";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+  </head>
+  <body>
+    <div id="app" class="page">
+      <el-container v-bind:style="{height: ch}">
+        <el-aside>
+          <h1>Aria2中文说明文档</h1>
+
+          <h3>文档大纲</h3>
+          <ul>
+            <li><a href="../">基本用法</a></li>
+            <li><a href="../options/">配置</a></li>
+            <li><a href="../exit_status/">结束状态</a></li>
+            <li>环境</li>
+            <li><a href="../files/">文件</a></li>
+            <li><a href="../rpc_interface/">RPC调用</a></li>
+            <li><a href="../misc/">MISC</a></li>
+            <li><a href="../example/">例子</a></li>
+          </ul>
+        </el-aside>
+        <el-main>
+          <el-alert
+            title="须知"
+            type="warning"
+            :closable="false"
+            show-icon>
+            本文档并未完全翻译完成，我需要你的帮助。<a href="https://github.com/tun6-com/manual-Aria2" target="_blank">前往GitHub编辑</a>。
+          </el-alert>
+
+          <div id="environment">
+            <h2>ENVIRONMENT</h2>
+            <p>aria2 recognizes the following environment variables.</p>
+            <dl>
+              <dt><code>http_proxy</span> <span>[http://][USER:PASSWORD&#64;]HOST[:PORT]</code></dt>
+              <dd>Specify proxy server for use in HTTP.
+                Overrides http-proxy value in configuration file.
+                The command-line option <a href="#cmdoption-http-proxy"><code>--http-proxy</code></a> overrides this value.</dd>
+              <dt><code>https_proxy</span> <span>[http://][USER:PASSWORD&#64;]HOST[:PORT]</code></dt>
+              <dd>Specify proxy server for use in HTTPS.
+                Overrides https-proxy value in configuration file.
+                The command-line option <a href="#cmdoption-https-proxy"><code>--https-proxy</code></a> overrides this value.</dd>
+              <dt><code>ftp_proxy</span> <span>[http://][USER:PASSWORD&#64;]HOST[:PORT]</code></dt>
+              <dd>Specify proxy server for use in FTP.
+                Overrides ftp-proxy value in configuration file.
+                The command-line option <a href="#cmdoption-ftp-proxy"><code>--ftp-proxy</code></a> overrides this value.</dd>
+              <dt><code>all_proxy</span> <span>[http://][USER:PASSWORD&#64;]HOST[:PORT]</code></dt>
+              <dd>Specify proxy server for use if no protocol-specific proxy is specified.
+                Overrides all-proxy value in configuration file.
+                The command-line option <a href="#cmdoption-all-proxy"><code>--all-proxy</code></a> overrides this value.</dd>
+            </dl>
+            <div>
+              <p>注意</p>
+              <p>Although aria2 accepts <code>ftp://</code> and <code>https://</code> scheme in proxy URI, it
+                simply assumes that <code>http://</code> is specified and does not change its
+                behavior based on the specified scheme.</p>
+            </div>
+            <dl>
+              <dt><code>no_proxy</span> <span>[DOMAIN,...]</code></dt>
+              <dd>Specify a comma-separated list of host names, domains and network addresses
+                with or without a subnet mask where no proxy should be used. Overrides the
+                <cite>no-proxy</cite> value in configuration file. The command-line option
+                <a href="#cmdoption-no-proxy"><code>--no-proxy</code></a> overrides this value.</dd>
+            </dl>
+          </div>
+
+
+
+        </el-main>
+      </el-container>
+
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/element-ui/lib/index.js"></script>
+    <script type="text/javascript">
+    var app = new Vue({
+      el: '#app',
+      data: {
+        ph:document.documentElement.clientHeight,
+        pw:document.documentElement.clientWidth,
+        ch:'auto',
+      },
+      mounted:function(){
+        if(this.pw>1200) this.ch=this.ph+'px';
+      },
+      methods:{
+
+      }
+    })
+    </script>
+  </body>
+</html>

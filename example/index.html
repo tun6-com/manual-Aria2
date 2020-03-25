@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+  <head>
+    <meta charset="utf-8">
+    <title>例子_Aria2_用户手册_Tun6</title>
+    <meta name="keywords" content="Aria2,配置,设置,中文,文档,手册,说明,API,"/>
+    <meta name="description" content="Aria2是一个轻量级的、支持多种协议的跨平台命令行下载工具。同时支持HTTP(S)、FTP、SFTP、BitTorrent和Metalink协议。">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-ui/lib/theme-chalk/index.css">
+    <link rel="stylesheet" href="../common.css">
+    <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?d5f982237a80a8b72feeaa6caac3f4fc";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+  </head>
+  <body>
+    <div id="app" class="page">
+      <el-container v-bind:style="{height: ch}">
+        <el-aside>
+          <h1>Aria2中文说明文档</h1>
+
+          <h3>文档大纲</h3>
+          <ul>
+            <li><a href="../">基本用法</a></li>
+            <li><a href="../options/">配置</a></li>
+            <li><a href="../exit_status/">结束状态</a></li>
+            <li><a href="../environment/">环境</a></li>
+            <li><a href="../files/">文件</a></li>
+            <li><a href="../rpc_interface/">RPC调用</a></li>
+            <li><a href="../misc/">MISC</a></li>
+            <li>例子
+              <ul>
+                <li><a href="#http-ftp-segmented-downloads">HTTP/FTP 分段下载</a></li>
+                <li><a href="#metalink-download">Metalink 下载</a></li>
+                <li><a href="#bittorrent-download">BitTorrent 下载</a></li>
+                <li><a href="#more-advanced-http-features">更多高级 HTTP 特性</a></li>
+                <li><a href="#rpc">RPC</a></li>
+                <li><a href="#and-more-advanced-features">更多高级特性</a></li>
+              </ul>
+            </li>
+          </ul>
+        </el-aside>
+        <el-main>
+          <el-alert
+            title="须知"
+            type="warning"
+            :closable="false"
+            show-icon>
+            本文档并未完全翻译完成，我需要你的帮助。<a href="https://github.com/tun6-com/manual-Aria2" target="_blank">前往GitHub编辑</a>。
+          </el-alert>
+
+          <div id="example">
+            <h2>EXAMPLE</h2>
+            <div id="http-ftp-segmented-downloads">
+              <h3>HTTP/FTP 分段下载</h3>
+              <div id="download-a-file">
+                <h4>Download a file</h4>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c <span>&quot;http://host/file.zip&quot;</span>
+                    </pre>
+                  </div>
+                </div>
+                <div>
+                  <p>注意</p>
+                  <p>To stop a download, press <kbd>Ctrl-C</kbd>. You can resume the transfer by
+                    running aria2c with the same argument in the same directory. You can change
+                    URIs as long as they are pointing to the same file.</p>
+                </div>
+              </div>
+              <div id="download-a-file-from-two-different-http-servers">
+                <h4>Download a file from two different HTTP servers</h4>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c <span>&quot;http://host/file.zip&quot;</span> <span>&quot;http://mirror/file.zip&quot;</span>
+                    </pre>
+                  </div>
+                </div>
+              </div>
+              <div id="download-a-file-from-one-host-using-multiple-connections">
+                <h4>Download a file from one host using multiple connections</h4>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c -x2 -k1M <span>&quot;http://host/file.zip&quot;</span>
+                    </pre>
+                  </div>
+                </div>
+                <div>
+                  <p>注意</p>
+                  <p>The -x option specified the number of allowed connections, while the -k option
+                    specified the size of chunks.</p>
+                </div>
+              </div>
+              <div id="download-a-file-from-http-and-ftp-servers-at-the-same-time">
+                <h4>Download a file from HTTP and FTP servers at the same time</h4>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c <span>&quot;http://host1/file.zip&quot;</span> <span>&quot;ftp://host2/file.zip&quot;</span>
+                    </pre>
+                  </div>
+                </div>
+              </div>
+              <div id="download-files-listed-in-a-text-file-concurrently">
+                <h4>Download files listed in a text file concurrently</h4>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c -ifiles.txt -j2
+                      </pre>
+                  </div>
+                </div>
+                <div>
+                  <p>注意</p>
+                  <p>-j option specifies the number of parallel downloads.</p>
+                </div>
+              </div>
+              <div id="using-a-proxy">
+                <h4>Using a proxy</h4>
+                <p>For HTTP:</p>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c --http-proxy<span>=</span><span>&quot;http://proxy:8080&quot;</span> <span>&quot;http://host/file&quot;</span>
+                    </pre>
+                  </div>
+                </div>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c --http-proxy<span>=</span><span>&quot;http://proxy:8080&quot;</span> --no-proxy<span>=</span><span>&quot;localhost,127.0.0.1,192.168.0.0/16&quot;</span> <span>&quot;http://host/file&quot;</span>
+                    </pre>
+                  </div>
+                </div>
+                <p>For FTP:</p>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c --ftp-proxy<span>=</span><span>&quot;http://proxy:8080&quot;</span> <span>&quot;ftp://host/file&quot;</span>
+                    </pre>
+                  </div>
+                </div>
+                <div>
+                  <p>注意</p>
+                  <p>See <a href="#cmdoption-http-proxy"><code>--http-proxy</code></a>, <a
+                      href="#cmdoption-https-proxy"><code>--https-proxy</code></a>, <a href="#cmdoption-ftp-proxy"><code
+                       ><span>--ftp-proxy</code></a>,
+                    <a href="#cmdoption-all-proxy"><code>--all-proxy</code></a> and <a
+                      href="#cmdoption-no-proxy"><code>--no-proxy</code></a> for details. You can specify
+                    proxy in the environment variables. See <a href="#environment">ENVIRONMENT</a> section.</p>
+                </div>
+              </div>
+              <div id="using-a-proxy-with-authorization">
+                <h4>Using a Proxy with authorization</h4>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c --http-proxy<span>=</span><span>&quot;http://username:password@proxy:8080&quot;</span> <span>&quot;http://host/file&quot;</span>
+                    </pre>
+                  </div>
+                </div>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c --http-proxy<span>=</span><span>&quot;http://proxy:8080&quot;</span> --http-proxy-user<span>=</span><span>&quot;username&quot;</span> --http-proxy-passwd<span>=</span><span>&quot;password&quot;</span> <span>&quot;http://host/file&quot;</span>
+                    </pre>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="metalink-download">
+              <h3>Metalink 下载</h3>
+              <div id="download-files-with-remote-metalink">
+                <h4>Download files with remote Metalink</h4>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c --follow-metalink<span>=</span>mem <span>&quot;http://host/file.metalink&quot;</span>
+                    </pre>
+                  </div>
+                </div>
+              </div>
+              <div id="download-using-a-local-metalink-file">
+                <h4>Download using a local metalink file</h4>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c -p --lowest-speed-limit<span>=</span><span>4000</span> file.metalink
+                    </pre>
+                  </div>
+                </div>
+                <div>
+                  <p>注意</p>
+                  <p>To stop a download, press <kbd>Ctrl-C</kbd>.
+                    You can resume the transfer by running aria2c with the same argument in the same
+                    directory.</p>
+                </div>
+              </div>
+              <div id="download-several-local-metalink-files">
+                <h4>Download several local metalink files</h4>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c -j2 file1.metalink file2.metalink
+                    </pre>
+                  </div>
+                </div>
+              </div>
+              <div id="download-only-selected-files">
+                <h4>Download only selected files</h4>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c --select-file<span>=</span><span>1</span>-4,8 file.metalink
+                    </pre>
+                  </div>
+                </div>
+                <div>
+                  <p>注意</p>
+                  <p>The index is printed to the console using -S option.</p>
+                </div>
+              </div>
+              <div id="download-a-file-using-a-local-metalink-file-with-user-preference">
+                <h4>Download a file using a local metalink file with user preference</h4>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c --metalink-location<span>=</span>jp,us --metalink-version<span>=</span><span>1</span>.1 --metalink-language<span>=</span>en-US file.metalink
+                    </pre>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="bittorrent-download">
+              <h3>BitTorrent 下载</h3>
+              <div id="download-files-using-a-remote-bittorrent-file">
+                <h4>Download files using a remote BitTorrent file</h4>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c --follow-torrent<span>=</span>mem <span>&quot;http://host/file.torrent&quot;</span>
+                    </pre>
+                  </div>
+                </div>
+              </div>
+              <div id="download-using-a-local-torrent-file">
+                <h4>Download using a local torrent file</h4>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c --max-upload-limit<span>=</span>40K file.torrent
+                    </pre>
+                  </div>
+                </div>
+                <div>
+                  <p>注意</p>
+                  <p>--max-upload-limit specifies the max of upload rate.</p>
+                </div>
+                <div>
+                  <p>注意</p>
+                  <p>To stop a download, press <kbd>Ctrl-C</kbd>. You can resume the transfer later by
+                    running aria2c with the same argument in the same directory.</p>
+                </div>
+              </div>
+              <div id="download-using-bittorrent-magnet-uri">
+                <h4>Download using BitTorrent Magnet URI</h4>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c <span>&quot;magnet:?xt=urn:btih:248D0A1CD08284299DE78D5C1ED359BB46717D8C&amp;dn=aria2&quot;</span>
+                    </pre>
+                  </div>
+                </div>
+                <div>
+                  <p>注意</p>
+                  <p>Don't forget to quote BitTorrent Magnet URIs which include <code>&amp;</code>
+                    characters with single(<code>'</code>) or double(<code>&quot;</code>) quotes when specifying URIs on
+                    the command-line.</p>
+                </div>
+              </div>
+              <div id="download-2-torrents">
+                <h4>Download 2 torrents</h4>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c -j2 file1.torrent file2.torrent
+                    </pre>
+                  </div>
+                </div>
+              </div>
+              <div id="download-a-file-via-torrent-and-http-ftp-server-in-parallel">
+                <h4>Download a file via torrent and HTTP/FTP server in parallel</h4>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c -Ttest.torrent <span>&quot;http://host1/file&quot;</span> <span>&quot;ftp://host2/file&quot;</span>
+                    </pre>
+                  </div>
+                </div>
+              </div>
+              <div id="only-download-specific-files-usually-called-selected-download">
+                <h4>Only download specific files (usually called &quot;selected download&quot;)</h4>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c --select-file<span>=</span><span>1</span>-4,8 file.torrent
+                    </pre>
+                  </div>
+                </div>
+                <div>
+                  <p>注意</p>
+                  <p>The index is printed to the console using -S option.</p>
+                </div>
+              </div>
+              <div id="download-a-torrent-file-but-do-not-download-the-torrent">
+                <h4>Download a .torrent file, but do not download the torrent</h4>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c --follow-torrent<span>=</span><span>false</span> <span>&quot;http://host/file.torrent&quot;</span>
+                    </pre>
+                  </div>
+                </div>
+              </div>
+              <div id="specify-the-output-file-name">
+                <h4>Specify the output file name</h4>
+                <p>To specify the output file name for BitTorrent downloads, you need to know
+                  the index of file in the torrent (see <a href="#cmdoption-show-files"><code>--show-files</code></a>). For
+                  example, the output looks like this:</p>
+                <div>
+                  <div>
+                    <pre>idx|path/length
+                    ===+======================
+                      1|dist/base-2.6.18.iso
+                       |99.9MiB
+                    ---+----------------------
+                      2|dist/driver-2.6.18.iso
+                       |169.0MiB
+                    ---+----------------------
+                    </pre>
+                  </div>
+                </div>
+                <p>To save 'dist/base-2.6.18.iso' in '/tmp/mydir/base.iso' and
+                  'dist/driver-2.6.18.iso' in '/tmp/dir/driver.iso', use the following
+                  command:</p>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c --dir<span>=</span>/tmp --index-out<span>=</span><span>1</span><span>=</span>mydir/base.iso --index-out<span>=</span><span>2</span><span>=</span>dir/driver.iso file.torrent
+                    </pre>
+                  </div>
+                </div>
+              </div>
+              <div id="change-the-listening-ports-for-incoming-peer-connections">
+                <h4>Change the listening ports for incoming peer connections</h4>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c --listen-port<span>=</span><span>7000</span>-7001,8000 file.torrent
+                    </pre>
+                  </div>
+                </div>
+                <div>
+                  <p>注意</p>
+                  <p>Since aria2 doesn't configure firewalls or routers for port forwarding, it's
+                    up to you to do so manually.</p>
+                </div>
+              </div>
+              <div id="specify-conditions-to-stop-seeding-after-torrent-downloads-finish">
+                <h4>Specify conditions to stop seeding after torrent downloads finish</h4>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c --seed-time<span>=</span><span>120</span> --seed-ratio<span>=</span><span>1</span>.0 file.torrent
+                    </pre>
+                  </div>
+                </div>
+                <div>
+                  <p>注意</p>
+                  <p>In the above example, the program stops seeding after 120 minutes since
+                    download completed or seed ratio reaches 1.0.</p>
+                </div>
+              </div>
+              <div id="throttle-upload-speed">
+                <h4>Throttle upload speed</h4>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c --max-upload-limit<span>=</span>100K file.torrent
+                    </pre>
+                  </div>
+                </div>
+              </div>
+              <div id="enable-ipv4-dht">
+                <h4>Enable IPv4 DHT</h4>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c --enable-dht --dht-listen-port<span>=</span><span>6881</span> file.torrent
+                    </pre>
+                  </div>
+                </div>
+                <div>
+                  <p>注意</p>
+                  <p>DHT uses UDP. Since aria2 doesn't configure firewalls or routers for port
+                    forwarding, it's up to you to do it manually.</p>
+                </div>
+              </div>
+              <div id="enable-ipv6-dht">
+                <h4>Enable IPv6 DHT</h4>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c --enable-dht6 --dht-listen-port<span>=</span><span>6881</span> --dht-listen-addr6<span>=</span>YOUR_GLOBAL_UNICAST_IPV6_ADDR
+                    </pre>
+                  </div>
+                </div>
+                <div>
+                  <p>注意</p>
+                  <p>aria2 uses the same ports as IPv4 for IPv6.</p>
+                </div>
+              </div>
+              <div id="add-and-remove-tracker-uris">
+                <h4>Add and remove tracker URIs</h4>
+                <p>Ignore all tracker announce URIs defined in file.torrent and use
+                  <code>http://tracker1/announce</code> and <code>http://tracker2/announce</code> instead:</p>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c --bt-exclude-tracker<span>=</span><span>&quot;*&quot;</span> --bt-tracker<span>=</span><span>&quot;http://tracker1/announce,http://tracker2/announce&quot;</span> file.torrent
+                    </pre>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="more-advanced-http-features">
+              <h3>更多高级 HTTP 特性</h3>
+              <div id="load-cookies">
+                <h4>Load cookies</h4>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c --load-cookies<span>=</span>cookies.txt <span>&quot;http://host/file.zip&quot;</span>
+                    </pre>
+                  </div>
+                </div>
+                <div>
+                  <p>注意</p>
+                  <p>You can use Firefox/Mozilla/Chromium's cookie files without modification.</p>
+                </div>
+              </div>
+              <div id="resume-download-started-by-web-browsers-or-other-programs">
+                <h4>Resume download started by web browsers or other programs</h4>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c -c -s2 <span>&quot;http://host/partiallydownloadedfile.zip&quot;</span>
+                    </pre>
+                  </div>
+                </div>
+                <div>
+                  <p>注意</p>
+                  <p>This will only work when the initial download was not multi-segmented.</p>
+                </div>
+              </div>
+              <div id="client-certificate-authorization-for-ssl-tls">
+                <h4>Client certificate authorization for SSL/TLS</h4>
+                <p>Specify a PKCS12 file as follows:</p>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c --certificate<span>=</span>/path/to/mycert.p12
+                    </pre>
+                  </div>
+                </div>
+                <div>
+                  <p>注意</p>
+                  <p>The file specified in <a href="#cmdoption-certificate"><code>--certificate</code></a> must be contain one
+                    PKCS12 encoded
+                    certificate and key. The password must be blank.</p>
+                </div>
+                <p>Alternatively, if PEM files are supported, use a command like the following:</p>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c --certificate<span>=</span>/path/to/mycert.pem --private-key<span>=</span>/path/to/mykey.pem https://host/file
+                    </pre>
+                  </div>
+                </div>
+                <div>
+                  <p>注意</p>
+                  <p>The file specified in <a href="#cmdoption-private-key"><code>--private-key</code></a> must be decrypted. The
+                    behavior when
+                    encrypted one is given is undefined.</p>
+                </div>
+              </div>
+              <div id="verify-ssl-tls-servers-using-given-ca-certificates">
+                <h4>Verify SSL/TLS servers using given CA certificates</h4>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c --ca-certificate<span>=</span>/path/to/ca-certificates.crt --check-certificate https://host/file
+                    </pre>
+                  </div>
+                </div>
+                <div>
+                  <p>注意</p>
+                  <p>This option is only available when aria2 was compiled against GnuTLS or
+                    OpenSSL.
+                    WinTLS and AppleTLS will always use the system certificate store. Instead of
+                    <code>`--ca-certificate</code> install the certificate in that store.</p>
+                </div>
+              </div>
+            </div>
+            <div id="rpc">
+              <h3>RPC</h3>
+              <div id="encrypt-rpc-traffic-with-ssl-tls">
+                <h4>Encrypt RPC traffic with SSL/TLS</h4>
+                <p>Specify a server PKC12 file:</p>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c --enable-rpc --rpc-certificate<span>=</span>/path/to/server.p12 --rpc-secure
+                    </pre>
+                  </div>
+                </div>
+                <div>
+                  <p>注意</p>
+                  <p>The file specified in <a href="#cmdoption-rpc-certificate"><code>--rpc-certificate</code></a> must be contain
+                    one PKCS12
+                    encoded certificate and key. The password must be blank.</p>
+                </div>
+                <p>Alternatively, when PEM files are supported (GnuTLS and OpenSSL), specify the
+                  server certificate file and private key file as follows:</p>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c --enable-rpc --rpc-certificate<span>=</span>/path/to/server.crt --rpc-private-key<span>=</span>/path/to/server.key --rpc-secure
+                    </pre>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="and-more-advanced-features">
+              <h3>更多高级特性</h3>
+              <div id="throttle-the-download-speed">
+                <h4>Throttle the download speed</h4>
+                <p>Per-download:</p>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c --max-download-limit<span>=</span>100K file.metalink
+                    </pre>
+                  </div>
+                </div>
+                <p>Overall:</p>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c --max-overall-download-limit<span>=</span>100K file.metalink
+                    </pre>
+                  </div>
+                </div>
+              </div>
+              <div id="repair-a-damaged-download">
+                <h4>Repair a damaged download</h4>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c -V file.metalink
+                    </pre>
+                  </div>
+                </div>
+                <div>
+                  <p>注意</p>
+                  <p>Repairing damaged downloads can be done efficiently when used with
+                    BitTorrent or Metalink with chunk checksums.</p>
+                </div>
+              </div>
+              <div id="drop-connections-if-download-speed-is-lower-than-a-specified-limit">
+                <h4>Drop connections if download speed is lower than a specified limit</h4>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c --lowest-speed-limit<span>=</span>10K file.metalink
+                    </pre>
+                  </div>
+                </div>
+              </div>
+              <div id="parameterized-uri-support">
+                <h4>Parameterized URI support</h4>
+                <p>You can specify set of parts:</p>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c -P <span>&quot;http://{host1,host2,host3}/file.iso&quot;</span>
+                    </pre>
+                  </div>
+                </div>
+                <p>You can specify numeric sequence:</p>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c -Z -P <span>&quot;http://host/image[000-100].png&quot;</span>
+                    </pre>
+                  </div>
+                </div>
+                <div>
+                  <p>注意</p>
+                  <p>The -Z option is required if the URIs don't point to the same file, such as in
+                    the above example.</p>
+                </div>
+                <p>You can specify step counter:</p>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c -Z -P <span>&quot;http://host/image[A-Z:2].png&quot;</span>
+                    </pre>
+                  </div>
+                </div>
+              </div>
+              <div id="verifying-checksums">
+                <h4>Verifying checksums</h4>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c --checksum<span>=</span>sha-1<span>=</span>0192ba11326fe2298c8cb4de616f4d4140213837 http://example.org/file
+                    </pre>
+                  </div>
+                </div>
+              </div>
+              <div id="parallel-downloads-of-an-arbitrary-number-of-uris-metalink-torrent">
+                <h4>Parallel downloads of an arbitrary number of URIs, metalink, torrent</h4>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c -j3 -Z <span>&quot;http://host/file1&quot;</span> file2.torrent file3.metalink
+                    </pre>
+                  </div>
+                </div>
+              </div>
+              <div id="bittorrent-encryption">
+                <h4>BitTorrent Encryption</h4>
+                <p>Encrypt the whole payload using ARC4 (obfuscation):</p>
+                <div>
+                  <div>
+                    <pre><span>$</span> aria2c --bt-min-crypto-level<span>=</span>arc4 --bt-require-crypto<span>=</span><span>true</span> file.torrent
+                    </pre>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+
+
+
+        </el-main>
+      </el-container>
+
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/element-ui/lib/index.js"></script>
+    <script type="text/javascript">
+    var app = new Vue({
+      el: '#app',
+      data: {
+        ph:document.documentElement.clientHeight,
+        pw:document.documentElement.clientWidth,
+        ch:'auto',
+      },
+      mounted:function(){
+        if(this.pw>1200) this.ch=this.ph+'px';
+      },
+      methods:{
+
+      }
+    })
+    </script>
+  </body>
+</html>

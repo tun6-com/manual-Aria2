@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+  <head>
+    <meta charset="utf-8">
+    <title>文件_Aria2_用户手册_Tun6</title>
+    <meta name="keywords" content="Aria2,配置,设置,中文,文档,手册,说明,API,"/>
+    <meta name="description" content="Aria2是一个轻量级的、支持多种协议的跨平台命令行下载工具。同时支持HTTP(S)、FTP、SFTP、BitTorrent和Metalink协议。">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-ui/lib/theme-chalk/index.css">
+    <link rel="stylesheet" href="../common.css">
+    <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?d5f982237a80a8b72feeaa6caac3f4fc";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+  </head>
+  <body>
+    <div id="app" class="page">
+      <el-container v-bind:style="{height: ch}">
+        <el-aside>
+          <h1>Aria2中文说明文档</h1>
+
+          <h3>文档大纲</h3>
+          <ul>
+            <li><a href="../">基本用法</a></li>
+            <li><a href="../options/">配置</a></li>
+            <li><a href="../exit_status/">结束状态</a></li>
+            <li><a href="../environment/">环境</a></li>
+            <li>文件
+              <ul>
+                <li><a href="#aria2-conf">aria2.conf</a></li>
+                <li><a href="#dht-dat">dht.dat</a></li>
+                <li><a href="#netrc">Netrc</a></li>
+                <li><a href="#control-file">控制文件</a></li>
+                <li><a href="#input-file">输入文件</a></li>
+                <li><a href="#server-performance-profile">服务性能配置文件</a></li>
+              </ul>
+            </li>
+            <li><a href="../rpc_interface/">RPC调用</a></li>
+            <li><a href="../misc/">MISC</a></li>
+            <li><a href="../example/">例子</a></li>
+          </ul>
+        </el-aside>
+        <el-main>
+          <el-alert
+            title="须知"
+            type="warning"
+            :closable="false"
+            show-icon>
+            本文档并未完全翻译完成，我需要你的帮助。<a href="https://github.com/tun6-com/manual-Aria2" target="_blank">前往GitHub编辑</a>。
+          </el-alert>
+
+
+          <div id="files">
+            <h2>FILES</h2>
+            <div id="aria2-conf">
+              <h3>aria2.conf</h3>
+              <p>By default, aria2 checks whether the legacy path
+                <code>$HOME/.aria2/aria2.conf</code> is present, otherwise it parses
+                <code>$XDG_CONFIG_HOME/aria2/aria2.conf</code> as its configuration file. You
+                can specify the path to configuration file using <a href="#cmdoption-conf-path"><code>--conf-path</code></a>
+                option. If you don't want to use the configuration file, use
+                <a href="#cmdoption-no-conf"><code>--no-conf</code></a> option.</p>
+              <p>The configuration file is a text file and has 1 option per each
+                line. In each line, you can specify name-value pair in the format:
+                <code>NAME=VALUE</code>, where name is the long command-line option name without
+                <code>--</code> prefix. You can use same syntax for the command-line option. The
+                lines beginning <code>#</code> are treated as comments:</p>
+              <div>
+                <div>
+                  <pre><span># sample configuration file for aria2c</span>
+                  <span>listen</span><span>-</span><span>port</span><span>=</span><span>60000</span>
+                  <span>dht</span><span>-</span><span>listen</span><span>-</span><span>port</span><span>=</span><span>60000</span>
+                  <span>seed</span><span>-</span><span>ratio</span><span>=</span><span>1.0</span>
+                  <span>max</span><span>-</span><span>upload</span><span>-</span><span>limit</span><span>=</span><span>50</span><span>K</span>
+                  <span>ftp</span><span>-</span><span>pasv</span><span>=</span><span>true</span>
+                  </pre>
+                </div>
+              </div>
+              <div>
+                <p>注意</p>
+                <p>The confidential information such as user/password might be included
+                  in the configuration file. It is recommended to change file mode
+                  bits of the configuration file (e.g., <code>chmod</span> <span>600</span> <span>aria2.conf</code>), so
+                  that other user cannot see the contents of the file.</p>
+              </div>
+              <p>The environment variables, such as <code>${HOME}</code>, are expanded by shell.
+                This means that those variables used in configuration file are not
+                expanded. However, it is useful to <code>${HOME}</code> to refer user's home
+                directory in configuration file to specify file paths. Therefore,
+                aria2 expands <code>${HOME}</code> found in the following option values to
+                user's home directory:</p>
+              <ul>
+                <li><a href="#cmdoption-ca-certificate"><code>ca-certificate</code></a></li>
+                <li><a href="#cmdoption-certificate"><code>certificate</code></a></li>
+                <li><a href="#cmdoption-dht-file-path"><code>dht-file-path</code></a></li>
+                <li><a href="#cmdoption-dht-file-path6"><code>dht-file-path6</code></a></li>
+                <li><a href="#cmdoption-d"><code>dir</code></a></li>
+                <li><a href="#cmdoption-i"><code>input-file</code></a></li>
+                <li><a href="#cmdoption-load-cookies"><code>load-cookies</code></a></li>
+                <li><a href="#cmdoption-l"><code>log</code></a></li>
+                <li><a href="#cmdoption-metalink-file"><code>metalink-file</code></a></li>
+                <li><a href="#cmdoption-netrc-path"><code>netrc-path</code></a></li>
+                <li><a href="#cmdoption-on-bt-download-complete"><code>on-bt-download-complete</code></a></li>
+                <li><a href="#cmdoption-on-download-complete"><code>on-download-complete</code></a></li>
+                <li><a href="#cmdoption-on-download-error"><code>on-download-error</code></a></li>
+                <li><a href="#cmdoption-on-download-start"><code>on-download-start</code></a></li>
+                <li><a href="#cmdoption-on-download-stop"><code>on-download-stop</code></a></li>
+                <li><a href="#cmdoption-on-download-pause"><code>on-download-pause</code></a></li>
+                <li><a href="#cmdoption-o"><code>out</code></a></li>
+                <li><a href="#cmdoption-private-key"><code>private-key</code></a></li>
+                <li><a href="#cmdoption-rpc-certificate"><code>rpc-certificate</code></a></li>
+                <li><a href="#cmdoption-rpc-private-key"><code>rpc-private-key</code></a></li>
+                <li><a href="#cmdoption-save-cookies"><code>save-cookies</code></a></li>
+                <li><a href="#cmdoption-save-session"><code>save-session</code></a></li>
+                <li><a href="#cmdoption-server-stat-if"><code>server-stat-if</code></a></li>
+                <li><a href="#cmdoption-server-stat-of"><code>server-stat-of</code></a></li>
+                <li><a href="#cmdoption-torrent-file"><code>torrent-file</code></a></li>
+              </ul>
+              <p>Note that this expansion occurs even if the above options are used in
+                the command-line. This means that expansion may occur 2 times: first,
+                shell and then aria2c.</p>
+            </div>
+            <div id="dht-dat">
+              <h3>dht.dat</h3>
+              <p>Unless the legacy file paths <code>$HOME/.aria2/dht.dat</code> and
+                <code>$HOME/.aria2/dht6.dat</code> are pointing to existing files, the routing
+                table of IPv4 DHT is saved to the path
+                <code>$XDG_CACHE_HOME/aria2/dht.dat</code> and the routing table of IPv6 DHT is
+                saved to the path <code>$XDG_CACHE_HOME/aria2/dht6.dat</code>.</p>
+            </div>
+            <div id="netrc">
+              <h3>Netrc</h3>
+              <p>Netrc support is enabled by default for HTTP(S)/FTP/SFTP. To disable
+                netrc support, specify <a href="#cmdoption-n"><code>--no-netrc</code></a> option. Your .netrc
+                file should have correct permissions(600).</p>
+              <p>If machine name starts <code>.</code>, aria2 performs domain-match instead of
+                exact match. This is an extension of aria2. For example of domain
+                match, imagine the following .netrc entry:</p>
+              <div>
+                <div>
+                  <pre><span>machine</span> <span>.</span><span>example</span><span>.</span><span>org</span> <span>login</span> <span>myid</span> <span>password</span> <span>mypasswd</span>
+                  </pre>
+                </div>
+              </div>
+              <p><code>aria2.example.org</code> domain-matches <code>.example.org</code> and uses <code
+                 ><span>myid</code> and
+                <code>mypasswd</code>.</p>
+              <p>Some domain-match example follow: <code>example.net</code> does not domain-match
+                <code>.example.org</code>. <code>example.org</code> does not domain-match <code
+                 ><span>.example.org</code>
+                because of preceding <code>.</code>. If you want to match <code>example.org</code>, specify
+                <code>example.org</code>.</p>
+            </div>
+            <div id="control-file">
+              <h3>控制文件</h3>
+              <p>aria2 uses a control file to track the progress of a download. A
+                control file is placed in the same directory as the downloading file
+                and its file name is the file name of downloading file with <code>.aria2</code>
+                appended. For example, if you are downloading file.zip, then the
+                control file should be file.zip.aria2. (There is a exception for this
+                naming convention. If you are downloading a multi torrent, its
+                control file is the &quot;top directory&quot; name of the torrent with <code>.aria2</code>
+                appended. The &quot;top directory&quot; name is a value of &quot;name&quot; key in &quot;info&quot;
+                directory in a torrent file.)</p>
+              <p>Usually a control file is deleted once download completed. If aria2
+                decides that download cannot be resumed(for example, when downloading
+                a file from a HTTP server which doesn't support resume), a control
+                file is not created.</p>
+              <p>Normally if you lose a control file, you cannot resume download. But
+                if you have a torrent or metalink with chunk checksums for the file,
+                you can resume the download without a control file by giving -V option
+                to aria2c in command-line.</p>
+            </div>
+            <div id="input-file">
+              <h3>输入文件</h3>
+              <p>The input file can contain a list of URIs for aria2 to download. You
+                can specify multiple URIs for a single entity: separate URIs on a
+                single line using the TAB character.</p>
+              <p>Each line is treated as if it is provided in command-line argument.
+                Therefore they are affected by <a href="#cmdoption-z"><code>--force-sequential</code></a> and <a
+                  href="#cmdoption-parameterized-uri"><code>--parameterized-uri</code></a> options.</p>
+              <p>Since URIs in the input file are directly read by aria2, they must not
+                be quoted with single(<code>'</code>) or double(<code>&quot;</code>) quotation.</p>
+              <p>Lines starting with <code>#</code> are treated as comments and skipped.</p>
+              <p>Additionally, the following options can be specified after each line
+                of URIs. These optional lines must start with white space(s).</p>
+              <table>
+                <tr>
+                  <td>
+                    <ul>
+                      <li><a href="#cmdoption-all-proxy"><code>all-proxy</code></a></li>
+                      <li><a href="#cmdoption-all-proxy-passwd"><code>all-proxy-passwd</code></a></li>
+                      <li><a href="#cmdoption-all-proxy-user"><code>all-proxy-user</code></a></li>
+                      <li><a href="#cmdoption-allow-overwrite"><code>allow-overwrite</code></a></li>
+                      <li><a href="#cmdoption-allow-piece-length-change"><code>allow-piece-length-change</code></a></li>
+                      <li><a href="#cmdoption-always-resume"><code>always-resume</code></a></li>
+                      <li><a href="#cmdoption-async-dns"><code>async-dns</code></a></li>
+                      <li><a href="#cmdoption-auto-file-renaming"><code>auto-file-renaming</code></a></li>
+                      <li><a href="#cmdoption-bt-enable-hook-after-hash-check"><code>bt-enable-hook-after-hash-check</code></a></li>
+                      <li><a href="#cmdoption-bt-enable-lpd"><code>bt-enable-lpd</code></a></li>
+                      <li><a href="#cmdoption-bt-exclude-tracker"><code>bt-exclude-tracker</code></a></li>
+                      <li><a href="#cmdoption-bt-external-ip"><code>bt-external-ip</code></a></li>
+                      <li><a href="#cmdoption-bt-force-encryption"><code>bt-force-encryption</code></a></li>
+                      <li><a href="#cmdoption-bt-hash-check-seed"><code>bt-hash-check-seed</code></a></li>
+                      <li><a href="#cmdoption-bt-load-saved-metadata"><code>bt-load-saved-metadata</code></a></li>
+                      <li><a href="#cmdoption-bt-max-peers"><code>bt-max-peers</code></a></li>
+                      <li><a href="#cmdoption-bt-metadata-only"><code>bt-metadata-only</code></a></li>
+                      <li><a href="#cmdoption-bt-min-crypto-level"><code>bt-min-crypto-level</code></a></li>
+                      <li><a href="#cmdoption-bt-prioritize-piece"><code>bt-prioritize-piece</code></a></li>
+                      <li><a href="#cmdoption-bt-remove-unselected-file"><code>bt-remove-unselected-file</code></a></li>
+                      <li><a href="#cmdoption-bt-request-peer-speed-limit"><code>bt-request-peer-speed-limit</code></a></li>
+                      <li><a href="#cmdoption-bt-require-crypto"><code>bt-require-crypto</code></a></li>
+                      <li><a href="#cmdoption-bt-save-metadata"><code>bt-save-metadata</code></a></li>
+                      <li><a href="#cmdoption-bt-seed-unverified"><code>bt-seed-unverified</code></a></li>
+                      <li><a href="#cmdoption-bt-stop-timeout"><code>bt-stop-timeout</code></a></li>
+                      <li><a href="#cmdoption-bt-tracker"><code>bt-tracker</code></a></li>
+                      <li><a href="#cmdoption-bt-tracker-connect-timeout"><code>bt-tracker-connect-timeout</code></a></li>
+                      <li><a href="#cmdoption-bt-tracker-interval"><code>bt-tracker-interval</code></a></li>
+                      <li><a href="#cmdoption-bt-tracker-timeout"><code>bt-tracker-timeout</code></a></li>
+                      <li><a href="#cmdoption-v"><code>check-integrity</code></a></li>
+                      <li><a href="#cmdoption-checksum"><code>checksum</code></a></li>
+                      <li><a href="#cmdoption-conditional-get"><code>conditional-get</code></a></li>
+                      <li><a href="#cmdoption-connect-timeout"><code>connect-timeout</code></a></li>
+                      <li><a href="#cmdoption-content-disposition-default-utf8"><code>content-disposition-default-utf8</code></a></li>
+                      <li><a href="#cmdoption-c"><code>continue</code></a></li>
+                      <li><a href="#cmdoption-d"><code>dir</code></a></li>
+                      <li><a href="#cmdoption-dry-run"><code>dry-run</code></a></li>
+                    </ul>
+                  </td>
+                  <td>
+                    <ul>
+                      <li><a href="#cmdoption-enable-http-keep-alive"><code>enable-http-keep-alive</code></a></li>
+                      <li><a href="#cmdoption-enable-http-pipelining"><code>enable-http-pipelining</code></a></li>
+                      <li><a href="#cmdoption-enable-mmap"><code>enable-mmap</code></a></li>
+                      <li><a href="#cmdoption-enable-peer-exchange"><code>enable-peer-exchange</code></a></li>
+                      <li><a href="#cmdoption-file-allocation"><code>file-allocation</code></a></li>
+                      <li><a href="#cmdoption-follow-metalink"><code>follow-metalink</code></a></li>
+                      <li><a href="#cmdoption-follow-torrent"><code>follow-torrent</code></a></li>
+                      <li><a href="#cmdoption-force-save"><code>force-save</code></a></li>
+                      <li><a href="#cmdoption-ftp-passwd"><code>ftp-passwd</code></a></li>
+                      <li><a href="#cmdoption-p"><code>ftp-pasv</code></a></li>
+                      <li><a href="#cmdoption-ftp-proxy"><code>ftp-proxy</code></a></li>
+                      <li><a href="#cmdoption-ftp-proxy-passwd"><code>ftp-proxy-passwd</code></a></li>
+                      <li><a href="#cmdoption-ftp-proxy-user"><code>ftp-proxy-user</code></a></li>
+                      <li><a href="#cmdoption-ftp-reuse-connection"><code>ftp-reuse-connection</code></a></li>
+                      <li><a href="#cmdoption-ftp-type"><code>ftp-type</code></a></li>
+                      <li><a href="#cmdoption-ftp-user"><code>ftp-user</code></a></li>
+                      <li><a href="#cmdoption-gid"><code>gid</code></a></li>
+                      <li><a href="#cmdoption-hash-check-only"><code>hash-check-only</code></a></li>
+                      <li><a href="#cmdoption-header"><code>header</code></a></li>
+                      <li><a href="#cmdoption-http-accept-gzip"><code>http-accept-gzip</code></a></li>
+                      <li><a href="#cmdoption-http-auth-challenge"><code>http-auth-challenge</code></a></li>
+                      <li><a href="#cmdoption-http-no-cache"><code>http-no-cache</code></a></li>
+                      <li><a href="#cmdoption-http-passwd"><code>http-passwd</code></a></li>
+                      <li><a href="#cmdoption-http-proxy"><code>http-proxy</code></a></li>
+                      <li><a href="#cmdoption-http-proxy-passwd"><code>http-proxy-passwd</code></a></li>
+                      <li><a href="#cmdoption-http-proxy-user"><code>http-proxy-user</code></a></li>
+                      <li><a href="#cmdoption-http-user"><code>http-user</code></a></li>
+                      <li><a href="#cmdoption-https-proxy"><code>https-proxy</code></a></li>
+                      <li><a href="#cmdoption-https-proxy-passwd"><code>https-proxy-passwd</code></a></li>
+                      <li><a href="#cmdoption-https-proxy-user"><code>https-proxy-user</code></a></li>
+                      <li><a href="#cmdoption-index-out"><code>index-out</code></a></li>
+                      <li><a href="#cmdoption-lowest-speed-limit"><code>lowest-speed-limit</code></a></li>
+                      <li><a href="#cmdoption-x"><code>max-connection-per-server</code></a></li>
+                      <li><a href="#cmdoption-max-download-limit"><code>max-download-limit</code></a></li>
+                      <li><a href="#cmdoption-max-file-not-found"><code>max-file-not-found</code></a></li>
+                      <li><a href="#cmdoption-max-mmap-limit"><code>max-mmap-limit</code></a></li>
+                      <li><a href="#cmdoption-max-resume-failure-tries"><code>max-resume-failure-tries</code></a></li>
+                    </ul>
+                  </td>
+                  <td>
+                    <ul>
+                      <li><a href="#cmdoption-m"><code>max-tries</code></a></li>
+                      <li><a href="#cmdoption-max-upload-limit"><code>max-upload-limit</code></a></li>
+                      <li><a href="#cmdoption-metalink-base-uri"><code>metalink-base-uri</code></a></li>
+                      <li><a href="#cmdoption-metalink-enable-unique-protocol"><code>metalink-enable-unique-protocol</code></a></li>
+                      <li><a href="#cmdoption-metalink-language"><code>metalink-language</code></a></li>
+                      <li><a href="#cmdoption-metalink-location"><code>metalink-location</code></a></li>
+                      <li><a href="#cmdoption-metalink-os"><code>metalink-os</code></a></li>
+                      <li><a href="#cmdoption-metalink-preferred-protocol"><code>metalink-preferred-protocol</code></a></li>
+                      <li><a href="#cmdoption-metalink-version"><code>metalink-version</code></a></li>
+                      <li><a href="#cmdoption-k"><code>min-split-size</code></a></li>
+                      <li><a href="#cmdoption-no-file-allocation-limit"><code>no-file-allocation-limit</code></a></li>
+                      <li><a href="#cmdoption-n"><code>no-netrc</code></a></li>
+                      <li><a href="#cmdoption-no-proxy"><code>no-proxy</code></a></li>
+                      <li><a href="#cmdoption-o"><code>out</code></a></li>
+                      <li><a href="#cmdoption-parameterized-uri"><code>parameterized-uri</code></a></li>
+                      <li><a href="#cmdoption-pause"><code>pause</code></a></li>
+                      <li><a href="#cmdoption-pause-metadata"><code>pause-metadata</code></a></li>
+                      <li><a href="#cmdoption-piece-length"><code>piece-length</code></a></li>
+                      <li><a href="#cmdoption-proxy-method"><code>proxy-method</code></a></li>
+                      <li><a href="#cmdoption-realtime-chunk-checksum"><code>realtime-chunk-checksum</code></a></li>
+                      <li><a href="#cmdoption-referer"><code>referer</code></a></li>
+                      <li><a href="#cmdoption-r"><code>remote-time</code></a></li>
+                      <li><a href="#cmdoption-remove-control-file"><code>remove-control-file</code></a></li>
+                      <li><a href="#cmdoption-retry-wait"><code>retry-wait</code></a></li>
+                      <li><a href="#cmdoption-reuse-uri"><code>reuse-uri</code></a></li>
+                      <li><a href="#cmdoption-rpc-save-upload-metadata"><code>rpc-save-upload-metadata</code></a></li>
+                      <li><a href="#cmdoption-seed-ratio"><code>seed-ratio</code></a></li>
+                      <li><a href="#cmdoption-seed-time"><code>seed-time</code></a></li>
+                      <li><a href="#cmdoption-select-file"><code>select-file</code></a></li>
+                      <li><a href="#cmdoption-s"><code>split</code></a></li>
+                      <li><a href="#cmdoption-ssh-host-key-md"><code>ssh-host-key-md</code></a></li>
+                      <li><a href="#cmdoption-stream-piece-selector"><code>stream-piece-selector</code></a></li>
+                      <li><a href="#cmdoption-t"><code>timeout</code></a></li>
+                      <li><a href="#cmdoption-uri-selector"><code>uri-selector</code></a></li>
+                      <li><a href="#cmdoption-use-head"><code>use-head</code></a></li>
+                      <li><a href="#cmdoption-u"><code>user-agent</code></a></li>
+                    </ul>
+                  </td>
+                </tr>
+              </table>
+              <p>These options have exactly same meaning of the ones in the
+                command-line options, but it just applies to the URIs it belongs to.
+                Please note that for options in input file <code>--</code> prefix must be
+                stripped.</p>
+              <p>For example, the content of uri.txt is:</p>
+              <div>
+                <div>
+                  <pre><span>http</span><span>:</span><span>//</span><span>server</span><span>/</span><span>file</span><span>.</span><span>iso</span> <span>http</span><span>:</span><span>//</span><span>mirror</span><span>/</span><span>file</span><span>.</span><span>iso</span>
+                    <span>dir</span><span>=/</span><span>iso_images</span>
+                    <span>out</span><span>=</span><span>file</span><span>.</span><span>img</span>
+                  <span>http</span><span>:</span><span>//</span><span>foo</span><span>/</span><span>bar</span>
+                  </pre>
+                </div>
+              </div>
+              <p>If aria2 is executed with <code>-i</span> <span>uri.txt</span> <span>-d</span> <span>/tmp</code> options, then
+                <code>file.iso</code> is saved as <code>/iso_images/file.img</code> and it is downloaded
+                from <code>http://server/file.iso</code> and <code>http://mirror/file.iso</code>. The file
+                <code>bar</code> is downloaded from <code>http://foo/bar</code> and saved as <code
+                 ><span>/tmp/bar</code>.</p>
+              <p>In some cases, <a href="#cmdoption-o"><code>out</code></a> parameter has no effect.
+                See note of <a href="#cmdoption-o"><code>--out</code></a>
+                option for the restrictions.</p>
+            </div>
+            <div id="server-performance-profile">
+              <h3>服务性能配置文件</h3>
+              <p>This section describes the format of server performance profile. The
+                file is plain text and each line has several <code>NAME=VALUE</code> pair,
+                delimited by comma. Currently following NAMEs are recognized:</p>
+              <dl>
+                <dt><code>host</code></dt>
+                <dd>Host name of the server. Required.</dd>
+                <dt><code>protocol</code></dt>
+                <dd>Protocol for this profile, such as ftp, http. Required.</dd>
+                <dt><code>dl_speed</code></dt>
+                <dd>The average download speed observed in the previous download in
+                  bytes per sec. Required.</dd>
+                <dt><code>sc_avg_speed</code></dt>
+                <dd>The average download speed observed in the previous download in
+                  bytes per sec. This value is only updated if the download is done in
+                  single connection environment and only used by
+                  AdaptiveURISelector. Optional.</dd>
+                <dt><code>mc_avg_speed</code></dt>
+                <dd>The average download speed observed in the previous download in
+                  bytes per sec. This value is only updated if the download is done in
+                  multi connection environment and only used by
+                  AdaptiveURISelector. Optional.</dd>
+                <dt><code>counter</code></dt>
+                <dd>How many times the server is used. Currently this value is only used
+                  by AdaptiveURISelector. Optional.</dd>
+                <dt><code>last_updated</code></dt>
+                <dd>Last contact time in GMT with this server, specified in the seconds
+                  since the Epoch(00:00:00 on January 1, 1970, UTC). Required.</dd>
+                <dt><code>status</code></dt>
+                <dd>ERROR is set when server cannot be reached or out-of-service or
+                  timeout occurred. Otherwise, OK is set.</dd>
+              </dl>
+              <p>Those fields must exist in one line. The order of the fields is not
+                significant. You can put pairs other than the above; they are simply
+                ignored.</p>
+              <p>An example follows:</p>
+              <div>
+                <div>
+                  <pre><span>host</span><span>=</span><span>localhost</span><span>,</span> <span>protocol</span><span>=</span><span>http</span><span>,</span> <span>dl_speed</span><span>=</span><span>32000</span><span>,</span> <span>last_updated</span><span>=</span><span>1222491640</span><span>,</span> <span>status</span><span>=</span><span>OK</span>
+                  <span>host</span><span>=</span><span>localhost</span><span>,</span> <span>protocol</span><span>=</span><span>ftp</span><span>,</span> <span>dl_speed</span><span>=</span><span>0</span><span>,</span> <span>last_updated</span><span>=</span><span>1222491632</span><span>,</span> <span>status</span><span>=</span><span>ERROR</span>
+                  </pre>
+                </div>
+              </div>
+            </div>
+          </div>
+
+
+
+        </el-main>
+      </el-container>
+
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/element-ui/lib/index.js"></script>
+    <script type="text/javascript">
+    var app = new Vue({
+      el: '#app',
+      data: {
+        ph:document.documentElement.clientHeight,
+        pw:document.documentElement.clientWidth,
+        ch:'auto',
+      },
+      mounted:function(){
+        if(this.pw>1200) this.ch=this.ph+'px';
+      },
+      methods:{
+
+      }
+    })
+    </script>
+  </body>
+</html>

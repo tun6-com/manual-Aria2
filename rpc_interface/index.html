@@ -1,0 +1,1922 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+  <head>
+    <meta charset="utf-8">
+    <title>RPC调用_Aria2_用户手册_Tun6</title>
+    <meta name="keywords" content="Aria2,配置,设置,中文,文档,手册,说明,API,"/>
+    <meta name="description" content="Aria2是一个轻量级的、支持多种协议的跨平台命令行下载工具。同时支持HTTP(S)、FTP、SFTP、BitTorrent和Metalink协议。">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-ui/lib/theme-chalk/index.css">
+    <link rel="stylesheet" href="../common.css">
+    <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?d5f982237a80a8b72feeaa6caac3f4fc";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+  </head>
+  <body>
+    <div id="app" class="page">
+      <el-container v-bind:style="{height: ch}">
+        <el-aside>
+          <h1>Aria2中文说明文档</h1>
+
+          <h3>文档大纲</h3>
+          <ul>
+            <li><a href="../">基本用法</a></li>
+            <li><a href="../options/">配置</a></li>
+            <li><a href="../exit_status/">结束状态</a></li>
+            <li><a href="../environment/">环境</a></li>
+            <li><a href="../files/">文件</a></li>
+            <li>RPC调用
+              <ul>
+                <li><a href="#terminology">术语</a></li>
+                <li><a href="#rpc-authorization-secret-token">RPC授权密钥</a></li>
+                <li><a href="#methods">函数</a></li>
+                <li><a href="#error-handling">错误处理</a></li>
+                <li><a href="#id3">配置</a></li>
+                <li><a href="#json-rpc-using-http-get">基于 HTTP GET 的 JSON-RPC</a></li>
+                <li><a href="#json-rpc-over-websocket">基于 WebSocket 的 JSON-RPC</a></li>
+                <li><a href="#sample-xml-rpc-client-code">简易 XML-RPC 客户端</a></li>
+              </ul>
+            </li>
+            <li><a href="../misc/">MISC</a></li>
+            <li><a href="../example/">例子</a></li>
+          </ul>
+        </el-aside>
+        <el-main>
+          <el-alert
+            title="须知"
+            type="warning"
+            :closable="false"
+            show-icon>
+            本文档并未完全翻译完成，我需要你的帮助。<a href="https://github.com/tun6-com/manual-Aria2" target="_blank">前往GitHub编辑</a>。
+          </el-alert>
+
+          <div id="rpc-interface">
+            <h2>RPC INTERFACE</h2>
+            <p>aria2 provides JSON-RPC over HTTP and XML-RPC over HTTP interfaces that offer
+              basically the same functionality. aria2 also provides JSON-RPC
+              over WebSocket. JSON-RPC over WebSocket uses the same method signatures
+              and response format as JSON-RPC over HTTP, but additionally provides
+              server-initiated notifications. See <a href="#json-rpc-over-websocket">JSON-RPC over WebSocket</a> section for more
+              information.</p>
+            <p>The request path of the JSON-RPC interface (for both over HTTP and over
+              WebSocket) is <code>/jsonrpc</code>. The request path of the XML-RPC interface is
+              <code>/rpc</code>.</p>
+            <p>The WebSocket URI for JSON-RPC over WebSocket is
+              <code>ws://HOST:PORT/jsonrpc</code>. If you enabled SSL/TLS encryption, use
+              <code>wss://HOST:PORT/jsonrpc</code> instead.</p>
+            <p>The implemented JSON-RPC is based on JSON-RPC 2.0
+              &lt;<a href="http://jsonrpc.org/specification">http://jsonrpc.org/specification</a>&gt;, and
+              supports HTTP POST and GET (JSONP). The WebSocket transport is
+              an aria2 extension.</p>
+            <p>The JSON-RPC interface does not support notifications over HTTP, but the
+              RPC server will send notifications over WebSocket. It also does not
+              support floating point numbers. The character encoding must be UTF-8.</p>
+            <p>When reading the following documentation for JSON-RPC, interpret structs as JSON
+              objects.</p>
+            <div id="terminology">
+              <h3>术语</h3>
+              <p>GID</p>
+              <blockquote>
+                <div>The GID (or gid) is a key to manage each download. Each download will be
+                  assigned a unique GID. The GID is stored as 64-bit binary value in aria2.
+                  For RPC access, it is represented as a hex string of 16 characters (e.g.,
+                  <code>2089b05ecca3d829</code>). Normally, aria2 generates this GID for each
+                  download, but the user can specify GIDs manually using the <a href="#cmdoption-gid"><code>--gid</code></a> option. When
+                  querying downloads by GID, you can specify only the
+                  prefix of a GID as long as it is unique among others.</div>
+              </blockquote>
+            </div>
+            <div id="rpc-authorization-secret-token">
+              <h3>RPC授权密钥</h3>
+              <p>As of 1.18.4, in addition to HTTP basic authorization, aria2 provides
+                RPC method-level authorization. In a future release, HTTP basic
+                authorization will be removed and RPC method-level authorization will
+                become mandatory.</p>
+              <p>To use RPC method-level authorization, the user has to specify an RPC secret
+                authorization token using the <a href="#cmdoption-rpc-secret"><code>--rpc-secret</code></a> option. For each RPC
+                method call, the caller has to include the token prefixed with
+                <code>token:</code>. Even when the <a href="#cmdoption-rpc-secret"><code>--rpc-secret</code></a> option is not used, if the
+                first parameter in the RPC method is a string and starts with <code>token:</code>, it
+                will removed from the parameter list before the request is being processed.</p>
+              <p>For example, if the RPC secret authorization token is <code>$$secret$$</code>,
+                calling <cite>aria2.addUri</cite> RPC method would have to look like this:</p>
+              <div>
+                <div>
+                  <pre><span></span><span>aria2</span><span>.</span><span>addUri</span><span>(</span><span>&quot;token:$$secret$$&quot;</span><span>,</span> <span>[</span><span>&quot;http://example.org/file&quot;</span><span>])</span>
+                    </pre>
+                </div>
+              </div>
+              <p>The <cite>system.multicall</cite> RPC method is treated specially. Since the XML-RPC
+                specification only allows a single array as a parameter for this method, we
+                don't specify the token in the call. Instead, each nested method call has
+                to provide the token as the first parameter as described above.</p>
+              <div>
+                <p>注意</p>
+                <p>The secret token validation in aria2 is designed to take at least a certain
+                  amount of time to mitigate brute-force/dictionary attacks against the RPC
+                  interface. Therefore it is recommended to prefer Batch or <cite>system.multicall</cite>
+                  requests when appropriate.</p>
+                <p><cite>system.listMethods</cite> and <cite>system.listNotifications</cite> can be executed without token. Since they just
+                  return available methods/notifications, they do not alter anything, they're safe without secret token.</p>
+              </div>
+            </div>
+            <div id="methods">
+              <h3>函数</h3>
+              <p>All code examples are compatible with the Python 2.7 interpreter.
+                For information on the <em>secret</em> parameter, see <a href="#rpc-auth"><span>RPC authorization secret token</span></a>.</p>
+              <dl>
+                <dt id="aria2.addUri">
+                  <code>aria2.</code><code>addUri</code><span>(</span><span>[</span><em>secret</em>, <span>]</span><em>uris</em><span>[</span>,
+                  <em>options</em><span>[</span>, <em>position</em><span>]</span><span>]</span><span>)</span><a href="#aria2.addUri"
+                    title="Permalink to this definition"></a></dt>
+                <dd>
+                  <p>This method adds a new download. <em>uris</em> is an array of
+                    HTTP/FTP/SFTP/BitTorrent URIs (strings) pointing to the same
+                    resource. If you mix URIs pointing to different resources, then the
+                    download may fail or be corrupted without aria2 complaining. When
+                    adding BitTorrent Magnet URIs, <em>uris</em> must have only one element and
+                    it should be BitTorrent Magnet URI. <em>options</em> is a struct and its
+                    members are pairs of option name and value. See <a href="#id3"><span>Options</span></a>
+                    below for more details. If <em>position</em> is given, it must be an
+                    integer starting from 0. The new download will be inserted at
+                    <em>position</em> in the waiting queue. If <em>position</em> is omitted or
+                    <em>position</em> is larger than the current size of the queue, the new
+                    download is appended to the end of the queue. This method returns
+                    the GID of the newly registered download.</p>
+                  <p><strong>JSON-RPC Example</strong></p>
+                  <p>The following example adds <code>http://example.org/file</code>:</p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>urllib2</span><span>,</span> <span>json</span>
+                    <span>&gt;&gt;&gt; </span><span>jsonreq</span> <span>=</span> <span>json</span><span>.</span><span>dumps</span><span>({</span><span>&#39;jsonrpc&#39;</span><span>:</span><span>&#39;2.0&#39;</span><span>,</span> <span>&#39;id&#39;</span><span>:</span><span>&#39;qwer&#39;</span><span>,</span>
+                    <span>... </span>                      <span>&#39;method&#39;</span><span>:</span><span>&#39;aria2.addUri&#39;</span><span>,</span>
+                    <span>... </span>                      <span>&#39;params&#39;</span><span>:[[</span><span>&#39;http://example.org/file&#39;</span><span>]]})</span>
+                    <span>&gt;&gt;&gt; </span><span>c</span> <span>=</span> <span>urllib2</span><span>.</span><span>urlopen</span><span>(</span><span>&#39;http://localhost:6800/jsonrpc&#39;</span><span>,</span> <span>jsonreq</span><span>)</span>
+                    <span>&gt;&gt;&gt; </span><span>c</span><span>.</span><span>read</span><span>()</span>
+                    <span>&#39;{&quot;id&quot;:&quot;qwer&quot;,&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;result&quot;:&quot;2089b05ecca3d829&quot;}&#39;</span>
+                    </pre>
+                    </div>
+                  </div>
+                  <p><strong>XML-RPC Example</strong></p>
+                  <p>The following example adds <code>http://example.org/file</code>:</p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>xmlrpclib</span>
+                    <span>&gt;&gt;&gt; </span><span>s</span> <span>=</span> <span>xmlrpclib</span><span>.</span><span>ServerProxy</span><span>(</span><span>&#39;http://localhost:6800/rpc&#39;</span><span>)</span>
+                    <span>&gt;&gt;&gt; </span><span>s</span><span>.</span><span>aria2</span><span>.</span><span>addUri</span><span>([</span><span>&#39;http://example.org/file&#39;</span><span>])</span>
+                    <span>&#39;2089b05ecca3d829&#39;</span>
+                    </pre>
+                    </div>
+                  </div>
+                  <p>The following example adds a new download with two sources and some options:</p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>s</span><span>.</span><span>aria2</span><span>.</span><span>addUri</span><span>([</span><span>&#39;http://example.org/file&#39;</span><span>,</span> <span>&#39;http://mirror/file&#39;</span><span>],</span>
+                      <span>                    dict(dir=&quot;/tmp&quot;))</span>
+                      <span>&#39;d2703803b52216d1&#39;</span>
+                      </pre>
+                    </div>
+                  </div>
+                  <p>The following example adds a download and inserts it to the front of the
+                    queue:</p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>s</span><span>.</span><span>aria2</span><span>.</span><span>addUri</span><span>([</span><span>&#39;http://example.org/file&#39;</span><span>],</span> <span>{},</span> <span>0</span><span>)</span>
+                    <span>&#39;ca3d829cee549a4d&#39;</span>
+                    </pre>
+                    </div>
+                  </div>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.addTorrent">
+                  <code>[</span>, <em>uris</em><span>[</span>, <em>options</em><span>[</span>, <em>position</em><span>]</span><span>]</span><span
+                   >]</span><span>)</span></dt>
+                <dd>
+                  <p>This method adds a BitTorrent download by uploading a &quot;.torrent&quot; file.
+                    If you want to add a BitTorrent Magnet URI, use the <a href="#aria2.addUri" title="aria2.addUri"><code>aria2.addUri()</code></a>
+                    method instead. <em>torrent</em> must be a base64-encoded string containing the
+                    contents of the &quot;.torrent&quot; file.
+                    <em>uris</em> is an array of URIs (string). <em>uris</em> is used for
+                    Web-seeding. For single file torrents, the URI can be a complete URI
+                    pointing to the resource; if URI ends with /, name in torrent file
+                    is added. For multi-file torrents, name and path in torrent are
+                    added to form a URI for each file.
+                    <em>options</em> is a struct and its members are pairs of option name and value.
+                    See <a href="#id3"><span>Options</span></a> below for more details.
+                    If <em>position</em> is given, it must be an integer starting from 0. The new
+                    download will be inserted at <em>position</em> in the waiting queue. If
+                    <em>position</em> is omitted or <em>position</em> is larger than the current size of the
+                    queue, the new download is appended to the end of the queue.
+                    This method returns the GID of the newly registered download.
+                    If <a href="#cmdoption-rpc-save-upload-metadata"><code>--rpc-save-upload-metadata</code></a> is <code
+                     ><span>true</code>, the
+                    uploaded data is saved as a file named as the hex string of SHA-1 hash of
+                    data plus &quot;.torrent&quot; in the directory specified by <a href="#cmdoption-d"><code>--dir</code></a> option. E.g. a
+                    file name might be
+                    <code>0a3893293e27ac0490424c06de4d09242215f0a6.torrent</code>. If a file with the
+                    same name already exists, it is overwritten! If the file cannot be saved
+                    successfully or <a href="#cmdoption-rpc-save-upload-metadata"><code>--rpc-save-upload-metadata</code></a> is <code
+                     ><span>false</code>,
+                    the downloads added by this method are not saved by <a href="#cmdoption-save-session"><code>--save-session</code></a>.</p>
+                  <p>The following examples add local file <code>file.torrent</code>.</p>
+                  <p><strong>JSON-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>urllib2</span><span>,</span> <span>json</span><span>,</span> <span>base64</span>
+                      <span>&gt;&gt;&gt; </span><span>torrent</span> <span>=</span> <span>base64</span><span>.</span><span>b64encode</span><span>(</span><span>open</span><span>(</span><span>&#39;file.torrent&#39;</span><span>)</span><span>.</span><span>read</span><span>())</span>
+                      <span>&gt;&gt;&gt; </span><span>jsonreq</span> <span>=</span> <span>json</span><span>.</span><span>dumps</span><span>({</span><span>&#39;jsonrpc&#39;</span><span>:</span><span>&#39;2.0&#39;</span><span>,</span> <span>&#39;id&#39;</span><span>:</span><span>&#39;asdf&#39;</span><span>,</span>
+                      <span>... </span>                      <span>&#39;method&#39;</span><span>:</span><span>&#39;aria2.addTorrent&#39;</span><span>,</span> <span>&#39;params&#39;</span><span>:[</span><span>torrent</span><span>]})</span>
+                      <span>&gt;&gt;&gt; </span><span>c</span> <span>=</span> <span>urllib2</span><span>.</span><span>urlopen</span><span>(</span><span>&#39;http://localhost:6800/jsonrpc&#39;</span><span>,</span> <span>jsonreq</span><span>)</span>
+                      <span>&gt;&gt;&gt; </span><span>c</span><span>.</span><span>read</span><span>()</span>
+                      <span>&#39;{&quot;id&quot;:&quot;asdf&quot;,&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;result&quot;:&quot;2089b05ecca3d829&quot;}&#39;</span>
+                      </pre>
+                    </div>
+                  </div>
+                  <p><strong>XML-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>xmlrpclib</span>
+                      <span>&gt;&gt;&gt; </span><span>s</span> <span>=</span> <span>xmlrpclib</span><span>.</span><span>ServerProxy</span><span>(</span><span>&#39;http://localhost:6800/rpc&#39;</span><span>)</span>
+                      <span>&gt;&gt;&gt; </span><span>s</span><span>.</span><span>aria2</span><span>.</span><span>addTorrent</span><span>(</span><span>xmlrpclib</span><span>.</span><span>Binary</span><span>(</span><span>open</span><span>(</span><span>&#39;file.torrent&#39;</span><span>,</span> <span>mode</span><span>=</span><span>&#39;rb&#39;</span><span>)</span><span>.</span><span>read</span><span>()))</span>
+                      <span>&#39;2089b05ecca3d829&#39;</span>
+                      </pre>
+                    </div>
+                  </div>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.addMetalink">
+                  <code>[</span>, <em>options</em><span>[</span>, <em>position</em><span>]</span><span>]</span><span>)</span></dt>
+                <dd>
+                  <p>This method adds a Metalink download by uploading a &quot;.metalink&quot; file.
+                    <em>metalink</em> is a base64-encoded string which contains the contents of the
+                    &quot;.metalink&quot; file.
+                    <em>options</em> is a struct and its members are pairs of option name and value.
+                    See <a href="#id3"><span>Options</span></a> below for more details.
+                    If <em>position</em> is given, it must be an integer starting from 0. The new
+                    download will be inserted at <em>position</em> in the waiting queue. If
+                    <em>position</em> is omitted or <em>position</em> is larger than the current size of the
+                    queue, the new download is appended to the end of the queue.
+                    This method returns an array of GIDs of newly registered downloads.
+                    If <a href="#cmdoption-rpc-save-upload-metadata"><code>--rpc-save-upload-metadata</code></a> is <code
+                     ><span>true</code>, the uploaded data
+                    is saved as a file named hex string of SHA-1 hash of data plus
+                    &quot;.metalink&quot; in the directory specified by <a href="#cmdoption-d"><code>--dir</code></a>
+                    option. E.g. a file name might be
+                    <code>0a3893293e27ac0490424c06de4d09242215f0a6.metalink</code>. If a file with the
+                    same name already exists, it is overwritten! If the file cannot be saved
+                    successfully or <a href="#cmdoption-rpc-save-upload-metadata"><code>--rpc-save-upload-metadata</code></a> is <code
+                     ><span>false</code>,
+                    the downloads added by this method are not saved by
+                    <a href="#cmdoption-save-session"><code>--save-session</code></a>.</p>
+                  <p>The following examples add local file file.meta4.</p>
+                  <p><strong>JSON-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>urllib2</span><span>,</span> <span>json</span><span>,</span> <span>base64</span>
+                      <span>&gt;&gt;&gt; </span><span>metalink</span> <span>=</span> <span>base64</span><span>.</span><span>b64encode</span><span>(</span><span>open</span><span>(</span><span>&#39;file.meta4&#39;</span><span>)</span><span>.</span><span>read</span><span>())</span>
+                      <span>&gt;&gt;&gt; </span><span>jsonreq</span> <span>=</span> <span>json</span><span>.</span><span>dumps</span><span>({</span><span>&#39;jsonrpc&#39;</span><span>:</span><span>&#39;2.0&#39;</span><span>,</span> <span>&#39;id&#39;</span><span>:</span><span>&#39;qwer&#39;</span><span>,</span>
+                      <span>... </span>                      <span>&#39;method&#39;</span><span>:</span><span>&#39;aria2.addMetalink&#39;</span><span>,</span>
+                      <span>... </span>                      <span>&#39;params&#39;</span><span>:[</span><span>metalink</span><span>]})</span>
+                      <span>&gt;&gt;&gt; </span><span>c</span> <span>=</span> <span>urllib2</span><span>.</span><span>urlopen</span><span>(</span><span>&#39;http://localhost:6800/jsonrpc&#39;</span><span>,</span> <span>jsonreq</span><span>)</span>
+                      <span>&gt;&gt;&gt; </span><span>c</span><span>.</span><span>read</span><span>()</span>
+                      <span>&#39;{&quot;id&quot;:&quot;qwer&quot;,&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;result&quot;:[&quot;2089b05ecca3d829&quot;]}&#39;</span>
+                      </pre>
+                    </div>
+                  </div>
+                  <p><strong>XML-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>xmlrpclib</span>
+                    <span>&gt;&gt;&gt; </span><span>s</span> <span>=</span> <span>xmlrpclib</span><span>.</span><span>ServerProxy</span><span>(</span><span>&#39;http://localhost:6800/rpc&#39;</span><span>)</span>
+                    <span>&gt;&gt;&gt; </span><span>s</span><span>.</span><span>aria2</span><span>.</span><span>addMetalink</span><span>(</span><span>xmlrpclib</span><span>.</span><span>Binary</span><span>(</span><span>open</span><span>(</span><span>&#39;file.meta4&#39;</span><span>,</span> <span>mode</span><span>=</span><span>&#39;rb&#39;</span><span>)</span><span>.</span><span>read</span><span>()))</span>
+                    <span>[&#39;2089b05ecca3d829&#39;]</span>
+                    </pre>
+                    </div>
+                  </div>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.remove">
+                  <code>aria2.</code><code>remove</code><span>(</span><span>[</span><em>secret</em>, <span>]</span><em>gid</em><span>)</span><a
+                    href="#aria2.remove" title="Permalink to this definition"></a></dt>
+                <dd>
+                  <p>This method removes the download denoted by <em>gid</em> (string). If the specified
+                    download is in progress, it is first stopped. The status of the removed
+                    download becomes <code>removed</code>.
+                    This method returns GID of removed download.</p>
+                  <p>The following examples remove a download with GID#2089b05ecca3d829.</p>
+                  <p><strong>JSON-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>urllib2</span><span>,</span> <span>json</span>
+                      <span>&gt;&gt;&gt; </span><span>jsonreq</span> <span>=</span> <span>json</span><span>.</span><span>dumps</span><span>({</span><span>&#39;jsonrpc&#39;</span><span>:</span><span>&#39;2.0&#39;</span><span>,</span> <span>&#39;id&#39;</span><span>:</span><span>&#39;qwer&#39;</span><span>,</span>
+                      <span>... </span>                      <span>&#39;method&#39;</span><span>:</span><span>&#39;aria2.remove&#39;</span><span>,</span>
+                      <span>... </span>                      <span>&#39;params&#39;</span><span>:[</span><span>&#39;2089b05ecca3d829&#39;</span><span>]})</span>
+                      <span>&gt;&gt;&gt; </span><span>c</span> <span>=</span> <span>urllib2</span><span>.</span><span>urlopen</span><span>(</span><span>&#39;http://localhost:6800/jsonrpc&#39;</span><span>,</span> <span>jsonreq</span><span>)</span>
+                      <span>&gt;&gt;&gt; </span><span>c</span><span>.</span><span>read</span><span>()</span>
+                      <span>&#39;{&quot;id&quot;:&quot;qwer&quot;,&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;result&quot;:&quot;2089b05ecca3d829&quot;}&#39;</span>
+                      </pre>
+                    </div>
+                  </div>
+                  <p><strong>XML-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>xmlrpclib</span>
+                      <span>&gt;&gt;&gt; </span><span>s</span> <span>=</span> <span>xmlrpclib</span><span>.</span><span>ServerProxy</span><span>(</span><span>&#39;http://localhost:6800/rpc&#39;</span><span>)</span>
+                      <span>&gt;&gt;&gt; </span><span>s</span><span>.</span><span>aria2</span><span>.</span><span>remove</span><span>(</span><span>&#39;2089b05ecca3d829&#39;</span><span>)</span>
+                      <span>&#39;2089b05ecca3d829&#39;</span>
+                      </pre>
+                    </div>
+                  </div>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.forceRemove">
+                  <code>)</span></dt>
+                <dd>
+                  <p>This method removes the download denoted by <em>gid</em>. This method
+                    behaves just like <a href="#aria2.remove" title="aria2.remove"><code>aria2.remove()</code></a> except that this method removes
+                    the download without performing any actions which take time, such as
+                    contacting BitTorrent trackers to unregister the download first.</p>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.pause">
+                  <code>aria2.</code><code>pause</code><span>(</span><span>[</span><em>secret</em>, <span>]</span><em>gid</em><span>)</span><a
+                    href="#aria2.pause" title="Permalink to this definition"></a></dt>
+                <dd>
+                  <p>This method pauses the download denoted by <em>gid</em> (string). The status of
+                    paused download becomes <code>paused</code>. If the download was active, the download
+                    is placed in the front of waiting queue. While the status is <code>paused</code>,
+                    the download is not started. To change status to <code>waiting</code>, use the
+                    <a href="#aria2.unpause" title="aria2.unpause"><code>aria2.unpause()</code></a> method.
+                    This method returns GID of paused download.</p>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.pauseAll">
+                  <code>aria2.</code><code>pauseAll</code><span>(</span><span>[</span><em>secret</em><span>]</span><span>)</span><a
+                    href="#aria2.pauseAll" title="Permalink to this definition"></a></dt>
+                <dd>
+                  <p>This method is equal to calling <a href="#aria2.pause" title="aria2.pause"><code>aria2.pause()</code></a> for every
+                    active/waiting
+                    download. This methods returns <code>OK</code>.</p>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.forcePause">
+                  <code>)</span></dt>
+                <dd>
+                  <p>This method pauses the download denoted by <em>gid</em>. This method
+                    behaves just like <a href="#aria2.pause" title="aria2.pause"><code>aria2.pause()</code></a> except that this method pauses
+                    downloads without performing any actions which take time, such as contacting
+                    BitTorrent trackers to unregister the download first.</p>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.forcePauseAll">
+                  <code>aria2.</code><code>forcePauseAll</code><span>(</span><span>[</span><em>secret</em><span>]</span><span>)</span><a
+                    href="#aria2.forcePauseAll" title="Permalink to this definition"></a></dt>
+                <dd>
+                  <p>This method is equal to calling <a href="#aria2.forcePause" title="aria2.forcePause"><code>aria2.forcePause()</code></a> for
+                    every
+                    active/waiting download. This methods returns <code>OK</code>.</p>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.unpause">
+                  <code>)</span></dt>
+                <dd>
+                  <p>This method changes the status of the download denoted by <em>gid</em> (string) from
+                    <code>paused</code> to <code>waiting</code>, making the download eligible to be restarted.
+                    This method returns the GID of the unpaused download.</p>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.unpauseAll">
+                  <code>aria2.</code><code>unpauseAll</code><span>(</span><span>[</span><em>secret</em><span>]</span><span>)</span><a
+                    href="#aria2.unpauseAll" title="Permalink to this definition"></a></dt>
+                <dd>
+                  <p>This method is equal to calling <a href="#aria2.unpause" title="aria2.unpause"><code>aria2.unpause()</code></a> for every
+                    paused
+                    download. This methods returns <code>OK</code>.</p>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.tellStatus">
+                  <code>[</span>, <em>keys</em><span>]</span><span>)</span></dt>
+                <dd>
+                  <p>This method returns the progress of the download denoted by <em>gid</em> (string).
+                    <em>keys</em> is an array of strings. If specified, the response contains only keys
+                    in the <em>keys</em> array. If <em>keys</em> is empty or omitted, the response contains all
+                    keys. This is useful when you just want specific keys and avoid unnecessary
+                    transfers.
+                    For example, <code>aria2.tellStatus(&quot;2089b05ecca3d829&quot;,</span> <span>[&quot;gid&quot;,</span> <span>&quot;status&quot;])</code>
+                    returns the <em>gid</em> and <em>status</em> keys only. The response is a struct and
+                    contains following keys. Values are strings.</p>
+                  <dl>
+                    <dt><code>gid</code></dt>
+                    <dd>GID of the download.</dd>
+                    <dt><code>status</code></dt>
+                    <dd><code>active</code> for currently downloading/seeding downloads.
+                      <code>waiting</code> for downloads in the queue; download is not started.
+                      <code>paused</code> for paused downloads.
+                      <code>error</code> for downloads that were stopped because of error.
+                      <code>complete</code> for stopped and completed downloads.
+                      <code>removed</code> for the downloads removed by user.</dd>
+                    <dt><code>totalLength</code></dt>
+                    <dd>Total length of the download in bytes.</dd>
+                    <dt><code>completedLength</code></dt>
+                    <dd>Completed length of the download in bytes.</dd>
+                    <dt><code>uploadLength</code></dt>
+                    <dd>Uploaded length of the download in bytes.</dd>
+                    <dt><code>bitfield</code></dt>
+                    <dd>Hexadecimal representation of the download progress. The highest bit
+                      corresponds to the piece at index 0. Any set bits indicate loaded pieces,
+                      while unset bits indicate not yet loaded and/or missing pieces. Any overflow
+                      bits at the end are set to zero. When the download was not started yet,
+                      this key will not be included in the response.</dd>
+                    <dt><code>downloadSpeed</code></dt>
+                    <dd>Download speed of this download measured in bytes/sec.</dd>
+                    <dt><code>uploadSpeed</code></dt>
+                    <dd>Upload speed of this download measured in bytes/sec.</dd>
+                    <dt><code>infoHash</code></dt>
+                    <dd>InfoHash. BitTorrent only.</dd>
+                    <dt><code>numSeeders</code></dt>
+                    <dd>The number of seeders aria2 has connected to. BitTorrent only.</dd>
+                    <dt><code>seeder</code></dt>
+                    <dd><code>true</code> if the local endpoint is a seeder. Otherwise <code>false</code>.
+                      BitTorrent only.</dd>
+                    <dt><code>pieceLength</code></dt>
+                    <dd>Piece length in bytes.</dd>
+                    <dt><code>numPieces</code></dt>
+                    <dd>The number of pieces.</dd>
+                    <dt><code>connections</code></dt>
+                    <dd>The number of peers/servers aria2 has connected to.</dd>
+                    <dt><code>errorCode</code></dt>
+                    <dd>The code of the last error for this item, if any. The value
+                      is a string. The error codes are defined in the <a href="#id1">EXIT STATUS</a> section.
+                      This value is only available for stopped/completed downloads.</dd>
+                    <dt><code>errorMessage</code></dt>
+                    <dd>The (hopefully) human readable error message associated to
+                      <code>errorCode</code>.</dd>
+                    <dt><code>followedBy</code></dt>
+                    <dd>List of GIDs which are generated as the result of this
+                      download. For example, when aria2 downloads a Metalink file, it
+                      generates downloads described in the Metalink (see the
+                      <a href="#cmdoption-follow-metalink"><code>--follow-metalink</code></a> option). This value is useful to track
+                      auto-generated downloads. If there are no such downloads, this key will not
+                      be included in the response.</dd>
+                    <dt><code>following</code></dt>
+                    <dd>The reverse link for <code>followedBy</code>. A download included in
+                      <code>followedBy</code> has this object's GID in its <code>following</code> value.</dd>
+                    <dt><code>belongsTo</code></dt>
+                    <dd>GID of a parent download. Some downloads are a part of another
+                      download. For example, if a file in a Metalink has BitTorrent
+                      resources, the downloads of &quot;.torrent&quot; files are parts of that parent.
+                      If this download has no parent, this key will not be included in the
+                      response.</dd>
+                    <dt><code>dir</code></dt>
+                    <dd>Directory to save files.</dd>
+                    <dt><code>files</code></dt>
+                    <dd>Returns the list of files. The elements of this list are the same structs
+                      used in <a href="#aria2.getFiles" title="aria2.getFiles"><code>aria2.getFiles()</code></a> method.</dd>
+                    <dt><code>bittorrent</code></dt>
+                    <dd>
+                      <p>Struct which contains information retrieved from the .torrent
+                        (file). BitTorrent only. It contains following keys.</p>
+                      <dl>
+                        <dt><code>announceList</code></dt>
+                        <dd>List of lists of announce URIs. If the torrent contains <code>announce</code>
+                          and no <code>announce-list</code>, <code>announce</code> is converted to the
+                          <code>announce-list</code> format.</dd>
+                        <dt><code>comment</code></dt>
+                        <dd>The comment of the torrent. <code>comment.utf-8</code> is used if available.</dd>
+                        <dt><code>creationDate</code></dt>
+                        <dd>The creation time of the torrent. The value is an integer since
+                          the epoch, measured in seconds.</dd>
+                        <dt><code>mode</code></dt>
+                        <dd>File mode of the torrent. The value is either <code>single</code> or <code>multi</code>.</dd>
+                        <dt><code>info</code></dt>
+                        <dd>
+                          <p>Struct which contains data from Info dictionary. It contains
+                            following keys.</p>
+                          <dl>
+                            <dt><code>name</code></dt>
+                            <dd>name in info dictionary. <code>name.utf-8</code> is used if available.</dd>
+                          </dl>
+                        </dd>
+                      </dl>
+                    </dd>
+                    <dt><code>verifiedLength</code></dt>
+                    <dd>The number of verified number of bytes while the files are being
+                      hash checked. This key exists only when this download is being
+                      hash checked.</dd>
+                    <dt><code>verifyIntegrityPending</code></dt>
+                    <dd><code>true</code> if this download is waiting for the hash check in a
+                      queue. This key exists only when this download is in the queue.</dd>
+                  </dl>
+                  <p><strong>JSON-RPC Example</strong></p>
+                  <p>The following example gets information about a download with GID#2089b05ecca3d829:</p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>urllib2</span><span>,</span> <span>json</span>
+                        <span>&gt;&gt;&gt; </span><span>from</span> <span>pprint</span> <span>import</span> <span>pprint</span>
+                        <span>&gt;&gt;&gt; </span><span>jsonreq</span> <span>=</span> <span>json</span><span>.</span><span>dumps</span><span>({</span><span>&#39;jsonrpc&#39;</span><span>:</span><span>&#39;2.0&#39;</span><span>,</span> <span>&#39;id&#39;</span><span>:</span><span>&#39;qwer&#39;</span><span>,</span>
+                        <span>... </span>                      <span>&#39;method&#39;</span><span>:</span><span>&#39;aria2.tellStatus&#39;</span><span>,</span>
+                        <span>... </span>                      <span>&#39;params&#39;</span><span>:[</span><span>&#39;2089b05ecca3d829&#39;</span><span>]})</span>
+                        <span>&gt;&gt;&gt; </span><span>c</span> <span>=</span> <span>urllib2</span><span>.</span><span>urlopen</span><span>(</span><span>&#39;http://localhost:6800/jsonrpc&#39;</span><span>,</span> <span>jsonreq</span><span>)</span>
+                        <span>&gt;&gt;&gt; </span><span>pprint</span><span>(</span><span>json</span><span>.</span><span>loads</span><span>(</span><span>c</span><span>.</span><span>read</span><span>()))</span>
+                        <span>{u&#39;id&#39;: u&#39;qwer&#39;,</span>
+                        <span> u&#39;jsonrpc&#39;: u&#39;2.0&#39;,</span>
+                        <span> u&#39;result&#39;: {u&#39;bitfield&#39;: u&#39;0000000000&#39;,</span>
+                        <span>             u&#39;completedLength&#39;: u&#39;901120&#39;,</span>
+                        <span>             u&#39;connections&#39;: u&#39;1&#39;,</span>
+                        <span>             u&#39;dir&#39;: u&#39;/downloads&#39;,</span>
+                        <span>             u&#39;downloadSpeed&#39;: u&#39;15158&#39;,</span>
+                        <span>             u&#39;files&#39;: [{u&#39;index&#39;: u&#39;1&#39;,</span>
+                        <span>                         u&#39;length&#39;: u&#39;34896138&#39;,</span>
+                        <span>                         u&#39;completedLength&#39;: u&#39;34896138&#39;,</span>
+                        <span>                         u&#39;path&#39;: u&#39;/downloads/file&#39;,</span>
+                        <span>                         u&#39;selected&#39;: u&#39;true&#39;,</span>
+                        <span>                         u&#39;uris&#39;: [{u&#39;status&#39;: u&#39;used&#39;,</span>
+                        <span>                                    u&#39;uri&#39;: u&#39;http://example.org/file&#39;}]}],</span>
+                        <span>             u&#39;gid&#39;: u&#39;2089b05ecca3d829&#39;,</span>
+                        <span>             u&#39;numPieces&#39;: u&#39;34&#39;,</span>
+                        <span>             u&#39;pieceLength&#39;: u&#39;1048576&#39;,</span>
+                        <span>             u&#39;status&#39;: u&#39;active&#39;,</span>
+                        <span>             u&#39;totalLength&#39;: u&#39;34896138&#39;,</span>
+                        <span>             u&#39;uploadLength&#39;: u&#39;0&#39;,</span>
+                        <span>             u&#39;uploadSpeed&#39;: u&#39;0&#39;}}</span>
+                        </pre>
+                    </div>
+                  </div>
+                  <p>The following example gets only specific keys:</p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>jsonreq</span> <span>=</span> <span>json</span><span>.</span><span>dumps</span><span>({</span><span>&#39;jsonrpc&#39;</span><span>:</span><span>&#39;2.0&#39;</span><span>,</span> <span>&#39;id&#39;</span><span>:</span><span>&#39;qwer&#39;</span><span>,</span>
+                      <span>... </span>                      <span>&#39;method&#39;</span><span>:</span><span>&#39;aria2.tellStatus&#39;</span><span>,</span>
+                      <span>... </span>                      <span>&#39;params&#39;</span><span>:[</span><span>&#39;2089b05ecca3d829&#39;</span><span>,</span>
+                      <span>... </span>                                <span>[</span><span>&#39;gid&#39;</span><span>,</span>
+                      <span>... </span>                                 <span>&#39;totalLength&#39;</span><span>,</span>
+                      <span>... </span>                                 <span>&#39;completedLength&#39;</span><span>]]})</span>
+                      <span>&gt;&gt;&gt; </span><span>c</span> <span>=</span> <span>urllib2</span><span>.</span><span>urlopen</span><span>(</span><span>&#39;http://localhost:6800/jsonrpc&#39;</span><span>,</span> <span>jsonreq</span><span>)</span>
+                      <span>&gt;&gt;&gt; </span><span>pprint</span><span>(</span><span>json</span><span>.</span><span>loads</span><span>(</span><span>c</span><span>.</span><span>read</span><span>()))</span>
+                      <span>{u&#39;id&#39;: u&#39;qwer&#39;,</span>
+                      <span> u&#39;jsonrpc&#39;: u&#39;2.0&#39;,</span>
+                      <span> u&#39;result&#39;: {u&#39;completedLength&#39;: u&#39;5701632&#39;,</span>
+                      <span>             u&#39;gid&#39;: u&#39;2089b05ecca3d829&#39;,</span>
+                      <span>             u&#39;totalLength&#39;: u&#39;34896138&#39;}}</span>
+                      </pre>
+                    </div>
+                  </div>
+                  <p><strong>XML-RPC Example</strong></p>
+                  <p>The following example gets information about a download with GID#2089b05ecca3d829:</p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>xmlrpclib</span>
+                      <span>&gt;&gt;&gt; </span><span>from</span> <span>pprint</span> <span>import</span> <span>pprint</span>
+                      <span>&gt;&gt;&gt; </span><span>s</span> <span>=</span> <span>xmlrpclib</span><span>.</span><span>ServerProxy</span><span>(</span><span>&#39;http://localhost:6800/rpc&#39;</span><span>)</span>
+                      <span>&gt;&gt;&gt; </span><span>r</span> <span>=</span> <span>s</span><span>.</span><span>aria2</span><span>.</span><span>tellStatus</span><span>(</span><span>&#39;2089b05ecca3d829&#39;</span><span>)</span>
+                      <span>&gt;&gt;&gt; </span><span>pprint</span><span>(</span><span>r</span><span>)</span>
+                      <span>{&#39;bitfield&#39;: &#39;ffff80&#39;,</span>
+                      <span> &#39;completedLength&#39;: &#39;34896138&#39;,</span>
+                      <span> &#39;connections&#39;: &#39;0&#39;,</span>
+                      <span> &#39;dir&#39;: &#39;/downloads&#39;,</span>
+                      <span> &#39;downloadSpeed&#39;: &#39;0&#39;,</span>
+                      <span> &#39;errorCode&#39;: &#39;0&#39;,</span>
+                      <span> &#39;files&#39;: [{&#39;index&#39;: &#39;1&#39;,</span>
+                      <span>            &#39;length&#39;: &#39;34896138&#39;,</span>
+                      <span>            &#39;completedLength&#39;: &#39;34896138&#39;,</span>
+                      <span>            &#39;path&#39;: &#39;/downloads/file&#39;,</span>
+                      <span>            &#39;selected&#39;: &#39;true&#39;,</span>
+                      <span>            &#39;uris&#39;: [{&#39;status&#39;: &#39;used&#39;,</span>
+                      <span>                      &#39;uri&#39;: &#39;http://example.org/file&#39;}]}],</span>
+                      <span> &#39;gid&#39;: &#39;2089b05ecca3d829&#39;,</span>
+                      <span> &#39;numPieces&#39;: &#39;17&#39;,</span>
+                      <span> &#39;pieceLength&#39;: &#39;2097152&#39;,</span>
+                      <span> &#39;status&#39;: &#39;complete&#39;,</span>
+                      <span> &#39;totalLength&#39;: &#39;34896138&#39;,</span>
+                      <span> &#39;uploadLength&#39;: &#39;0&#39;,</span>
+                      <span> &#39;uploadSpeed&#39;: &#39;0&#39;}</span>
+                      </pre>
+                    </div>
+                  </div>
+                  <p>The following example gets only specific keys:</p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>r</span> <span>=</span> <span>s</span><span>.</span><span>aria2</span><span>.</span><span>tellStatus</span><span>(</span><span>&#39;2089b05ecca3d829&#39;</span><span>,</span> <span>[</span><span>&#39;gid&#39;</span><span>,</span> <span>&#39;totalLength&#39;</span><span>,</span> <span>&#39;completedLength&#39;</span><span>])</span>
+                      <span>&gt;&gt;&gt; </span><span>pprint</span><span>(</span><span>r</span><span>)</span>
+                      <span>{&#39;completedLength&#39;: &#39;34896138&#39;, &#39;gid&#39;: &#39;2089b05ecca3d829&#39;, &#39;totalLength&#39;: &#39;34896138&#39;}</span>
+                      </pre>
+                    </div>
+                  </div>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.getUris">
+                  <code>)</span></dt>
+                <dd>
+                  <p>This method returns the URIs used in the download denoted by <em>gid</em> (string).
+                    The response is an array of structs and it contains following keys.
+                    Values are string.</p>
+                  <dl>
+                    <dt><code>uri</code></dt>
+                    <dd>URI</dd>
+                    <dt><code>status</code></dt>
+                    <dd>'used' if the URI is in use. 'waiting' if the URI is still waiting in the
+                      queue.</dd>
+                  </dl>
+                  <p><strong>JSON-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>urllib2</span><span>,</span> <span>json</span>
+                      <span>&gt;&gt;&gt; </span><span>from</span> <span>pprint</span> <span>import</span> <span>pprint</span>
+                      <span>&gt;&gt;&gt; </span><span>jsonreq</span> <span>=</span> <span>json</span><span>.</span><span>dumps</span><span>({</span><span>&#39;jsonrpc&#39;</span><span>:</span><span>&#39;2.0&#39;</span><span>,</span> <span>&#39;id&#39;</span><span>:</span><span>&#39;qwer&#39;</span><span>,</span>
+                      <span>... </span>                      <span>&#39;method&#39;</span><span>:</span><span>&#39;aria2.getUris&#39;</span><span>,</span>
+                      <span>... </span>                      <span>&#39;params&#39;</span><span>:[</span><span>&#39;2089b05ecca3d829&#39;</span><span>]})</span>
+                      <span>&gt;&gt;&gt; </span><span>c</span> <span>=</span> <span>urllib2</span><span>.</span><span>urlopen</span><span>(</span><span>&#39;http://localhost:6800/jsonrpc&#39;</span><span>,</span> <span>jsonreq</span><span>)</span>
+                      <span>&gt;&gt;&gt; </span><span>pprint</span><span>(</span><span>json</span><span>.</span><span>loads</span><span>(</span><span>c</span><span>.</span><span>read</span><span>()))</span>
+                      <span>{u&#39;id&#39;: u&#39;qwer&#39;,</span>
+                      <span> u&#39;jsonrpc&#39;: u&#39;2.0&#39;,</span>
+                      <span> u&#39;result&#39;: [{u&#39;status&#39;: u&#39;used&#39;,</span>
+                      <span>              u&#39;uri&#39;: u&#39;http://example.org/file&#39;}]}</span>
+                      </pre>
+                    </div>
+                  </div>
+                  <p><strong>XML-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>xmlrpclib</span>
+                        <span>&gt;&gt;&gt; </span><span>from</span> <span>pprint</span> <span>import</span> <span>pprint</span>
+                        <span>&gt;&gt;&gt; </span><span>s</span> <span>=</span> <span>xmlrpclib</span><span>.</span><span>ServerProxy</span><span>(</span><span>&#39;http://localhost:6800/rpc&#39;</span><span>)</span>
+                        <span>&gt;&gt;&gt; </span><span>r</span> <span>=</span> <span>s</span><span>.</span><span>aria2</span><span>.</span><span>getUris</span><span>(</span><span>&#39;2089b05ecca3d829&#39;</span><span>)</span>
+                        <span>&gt;&gt;&gt; </span><span>pprint</span><span>(</span><span>r</span><span>)</span>
+                        <span>[{&#39;status&#39;: &#39;used&#39;, &#39;uri&#39;: &#39;http://example.org/file&#39;}]</span>
+                        </pre>
+                    </div>
+                  </div>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.getFiles">
+                  <code>)</span></dt>
+                <dd>
+                  <p>This method returns the file list of the download denoted by <em>gid</em> (string).
+                    The response is an array of structs which contain following keys.
+                    Values are strings.</p>
+                  <dl>
+                    <dt><code>index</code></dt>
+                    <dd>Index of the file, starting at 1, in the same order as files appear in the
+                      multi-file torrent.</dd>
+                    <dt><code>path</code></dt>
+                    <dd>File path.</dd>
+                    <dt><code>length</code></dt>
+                    <dd>File size in bytes.</dd>
+                    <dt><code>completedLength</code></dt>
+                    <dd>Completed length of this file in bytes. Please note that it is
+                      possible that sum of <code>completedLength</code> is less than the
+                      <code>completedLength</code> returned by the <a href="#aria2.tellStatus" title="aria2.tellStatus"><code
+                         ><span>aria2.tellStatus()</code></a> method.
+                      This is because <code>completedLength</code> in
+                      <a href="#aria2.getFiles" title="aria2.getFiles"><code>aria2.getFiles()</code></a>
+                      only includes completed pieces. On the other hand, <code>completedLength</code>
+                      in <a href="#aria2.tellStatus" title="aria2.tellStatus"><code>aria2.tellStatus()</code></a> also includes partially completed
+                      pieces.</dd>
+                    <dt><code>selected</code></dt>
+                    <dd><code>true</code> if this file is selected by <a href="#cmdoption-select-file"><code
+                         ><span>--select-file</code></a> option. If
+                      <a href="#cmdoption-select-file"><code>--select-file</code></a> is not specified or this is single-file torrent or
+                      not a torrent download at all, this value is always <code>true</code>. Otherwise
+                      <code>false</code>.</dd>
+                    <dt><code>uris</code></dt>
+                    <dd>Returns a list of URIs for this file. The element type is the same struct
+                      used in the <a href="#aria2.getUris" title="aria2.getUris"><code>aria2.getUris()</code></a> method.</dd>
+                  </dl>
+                  <p><strong>JSON-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>urllib2</span><span>,</span> <span>json</span>
+                      <span>&gt;&gt;&gt; </span><span>from</span> <span>pprint</span> <span>import</span> <span>pprint</span>
+                      <span>&gt;&gt;&gt; </span><span>jsonreq</span> <span>=</span> <span>json</span><span>.</span><span>dumps</span><span>({</span><span>&#39;jsonrpc&#39;</span><span>:</span><span>&#39;2.0&#39;</span><span>,</span> <span>&#39;id&#39;</span><span>:</span><span>&#39;qwer&#39;</span><span>,</span>
+                      <span>... </span>                      <span>&#39;method&#39;</span><span>:</span><span>&#39;aria2.getFiles&#39;</span><span>,</span>
+                      <span>... </span>                      <span>&#39;params&#39;</span><span>:[</span><span>&#39;2089b05ecca3d829&#39;</span><span>]})</span>
+                      <span>&gt;&gt;&gt; </span><span>c</span> <span>=</span> <span>urllib2</span><span>.</span><span>urlopen</span><span>(</span><span>&#39;http://localhost:6800/jsonrpc&#39;</span><span>,</span> <span>jsonreq</span><span>)</span>
+                      <span>&gt;&gt;&gt; </span><span>pprint</span><span>(</span><span>json</span><span>.</span><span>loads</span><span>(</span><span>c</span><span>.</span><span>read</span><span>()))</span>
+                      <span>{u&#39;id&#39;: u&#39;qwer&#39;,</span>
+                      <span> u&#39;jsonrpc&#39;: u&#39;2.0&#39;,</span>
+                      <span> u&#39;result&#39;: [{u&#39;index&#39;: u&#39;1&#39;,</span>
+                      <span>              u&#39;length&#39;: u&#39;34896138&#39;,</span>
+                      <span>              u&#39;completedLength&#39;: u&#39;34896138&#39;,</span>
+                      <span>              u&#39;path&#39;: u&#39;/downloads/file&#39;,</span>
+                      <span>              u&#39;selected&#39;: u&#39;true&#39;,</span>
+                      <span>              u&#39;uris&#39;: [{u&#39;status&#39;: u&#39;used&#39;,</span>
+                      <span>                         u&#39;uri&#39;: u&#39;http://example.org/file&#39;}]}]}</span>
+                      </pre>
+                    </div>
+                  </div>
+                  <p><strong>XML-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>xmlrpclib</span>
+                        <span>&gt;&gt;&gt; </span><span>from</span> <span>pprint</span> <span>import</span> <span>pprint</span>
+                        <span>&gt;&gt;&gt; </span><span>s</span> <span>=</span> <span>xmlrpclib</span><span>.</span><span>ServerProxy</span><span>(</span><span>&#39;http://localhost:6800/rpc&#39;</span><span>)</span>
+                        <span>&gt;&gt;&gt; </span><span>r</span> <span>=</span> <span>s</span><span>.</span><span>aria2</span><span>.</span><span>getFiles</span><span>(</span><span>&#39;2089b05ecca3d829&#39;</span><span>)</span>
+                        <span>&gt;&gt;&gt; </span><span>pprint</span><span>(</span><span>r</span><span>)</span>
+                        <span>[{&#39;index&#39;: &#39;1&#39;,</span>
+                        <span>  &#39;length&#39;: &#39;34896138&#39;,</span>
+                        <span>  &#39;completedLength&#39;: &#39;34896138&#39;,</span>
+                        <span>  &#39;path&#39;: &#39;/downloads/file&#39;,</span>
+                        <span>  &#39;selected&#39;: &#39;true&#39;,</span>
+                        <span>  &#39;uris&#39;: [{&#39;status&#39;: &#39;used&#39;,</span>
+                        <span>            &#39;uri&#39;: &#39;http://example.org/file&#39;}]}]</span>
+                        </pre>
+                    </div>
+                  </div>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.getPeers">
+                  <code>)</span></dt>
+                <dd>
+                  <p>This method returns a list peers of the download denoted by <em>gid</em> (string).
+                    This method is for BitTorrent only. The response is an array of structs and
+                    contains the following keys. Values are strings.</p>
+                  <dl>
+                    <dt><code>peerId</code></dt>
+                    <dd>Percent-encoded peer ID.</dd>
+                    <dt><code>ip</code></dt>
+                    <dd>IP address of the peer.</dd>
+                    <dt><code>port</code></dt>
+                    <dd>Port number of the peer.</dd>
+                    <dt><code>bitfield</code></dt>
+                    <dd>Hexadecimal representation of the download progress of the peer. The
+                      highest bit corresponds to the piece at index 0. Set bits indicate the
+                      piece is available and unset bits indicate the piece is missing. Any
+                      spare bits at the end are set to zero.</dd>
+                    <dt><code>amChoking</code></dt>
+                    <dd><code>true</code> if aria2 is choking the peer. Otherwise <code>false</code>.</dd>
+                    <dt><code>peerChoking</code></dt>
+                    <dd><code>true</code> if the peer is choking aria2. Otherwise <code>false</code>.</dd>
+                    <dt><code>downloadSpeed</code></dt>
+                    <dd>Download speed (byte/sec) that this client obtains from the peer.</dd>
+                    <dt><code>uploadSpeed</code></dt>
+                    <dd>Upload speed(byte/sec) that this client uploads to the peer.</dd>
+                    <dt><code>seeder</code></dt>
+                    <dd><code>true</code> if this peer is a seeder. Otherwise <code>false</code>.</dd>
+                  </dl>
+                  <p><strong>JSON-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>urllib2</span><span>,</span> <span>json</span>
+                        <span>&gt;&gt;&gt; </span><span>from</span> <span>pprint</span> <span>import</span> <span>pprint</span>
+                        <span>&gt;&gt;&gt; </span><span>jsonreq</span> <span>=</span> <span>json</span><span>.</span><span>dumps</span><span>({</span><span>&#39;jsonrpc&#39;</span><span>:</span><span>&#39;2.0&#39;</span><span>,</span> <span>&#39;id&#39;</span><span>:</span><span>&#39;qwer&#39;</span><span>,</span>
+                        <span>... </span>                      <span>&#39;method&#39;</span><span>:</span><span>&#39;aria2.getPeers&#39;</span><span>,</span>
+                        <span>... </span>                      <span>&#39;params&#39;</span><span>:[</span><span>&#39;2089b05ecca3d829&#39;</span><span>]})</span>
+                        <span>&gt;&gt;&gt; </span><span>c</span> <span>=</span> <span>urllib2</span><span>.</span><span>urlopen</span><span>(</span><span>&#39;http://localhost:6800/jsonrpc&#39;</span><span>,</span> <span>jsonreq</span><span>)</span>
+                        <span>&gt;&gt;&gt; </span><span>pprint</span><span>(</span><span>json</span><span>.</span><span>loads</span><span>(</span><span>c</span><span>.</span><span>read</span><span>()))</span>
+                        <span>{u&#39;id&#39;: u&#39;qwer&#39;,</span>
+                        <span> u&#39;jsonrpc&#39;: u&#39;2.0&#39;,</span>
+                        <span> u&#39;result&#39;: [{u&#39;amChoking&#39;: u&#39;true&#39;,</span>
+                        <span>              u&#39;bitfield&#39;: u&#39;ffffffffffffffffffffffffffffffffffffffff&#39;,</span>
+                        <span>              u&#39;downloadSpeed&#39;: u&#39;10602&#39;,</span>
+                        <span>              u&#39;ip&#39;: u&#39;10.0.0.9&#39;,</span>
+                        <span>              u&#39;peerChoking&#39;: u&#39;false&#39;,</span>
+                        <span>              u&#39;peerId&#39;: u&#39;aria2%2F1%2E10%2E5%2D%87%2A%EDz%2F%F7%E6&#39;,</span>
+                        <span>              u&#39;port&#39;: u&#39;6881&#39;,</span>
+                        <span>              u&#39;seeder&#39;: u&#39;true&#39;,</span>
+                        <span>              u&#39;uploadSpeed&#39;: u&#39;0&#39;},</span>
+                        <span>             {u&#39;amChoking&#39;: u&#39;false&#39;,</span>
+                        <span>              u&#39;bitfield&#39;: u&#39;ffffeff0fffffffbfffffff9fffffcfff7f4ffff&#39;,</span>
+                        <span>              u&#39;downloadSpeed&#39;: u&#39;8654&#39;,</span>
+                        <span>              u&#39;ip&#39;: u&#39;10.0.0.30&#39;,</span>
+                        <span>              u&#39;peerChoking&#39;: u&#39;false&#39;,</span>
+                        <span>              u&#39;peerId&#39;: u&#39;bittorrent client758&#39;,</span>
+                        <span>              u&#39;port&#39;: u&#39;37842&#39;,</span>
+                        <span>              u&#39;seeder&#39;: u&#39;false&#39;,</span>
+                        <span>              u&#39;uploadSpeed&#39;: u&#39;6890&#39;}]}</span>
+                        </pre>
+                    </div>
+                  </div>
+                  <p><strong>XML-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>xmlrpclib</span>
+                      <span>&gt;&gt;&gt; </span><span>from</span> <span>pprint</span> <span>import</span> <span>pprint</span>
+                      <span>&gt;&gt;&gt; </span><span>s</span> <span>=</span> <span>xmlrpclib</span><span>.</span><span>ServerProxy</span><span>(</span><span>&#39;http://localhost:6800/rpc&#39;</span><span>)</span>
+                      <span>&gt;&gt;&gt; </span><span>r</span> <span>=</span> <span>s</span><span>.</span><span>aria2</span><span>.</span><span>getPeers</span><span>(</span><span>&#39;2089b05ecca3d829&#39;</span><span>)</span>
+                      <span>&gt;&gt;&gt; </span><span>pprint</span><span>(</span><span>r</span><span>)</span>
+                      <span>[{&#39;amChoking&#39;: &#39;true&#39;,</span>
+                      <span>  &#39;bitfield&#39;: &#39;ffffffffffffffffffffffffffffffffffffffff&#39;,</span>
+                      <span>  &#39;downloadSpeed&#39;: &#39;10602&#39;,</span>
+                      <span>  &#39;ip&#39;: &#39;10.0.0.9&#39;,</span>
+                      <span>  &#39;peerChoking&#39;: &#39;false&#39;,</span>
+                      <span>  &#39;peerId&#39;: &#39;aria2%2F1%2E10%2E5%2D%87%2A%EDz%2F%F7%E6&#39;,</span>
+                      <span>  &#39;port&#39;: &#39;6881&#39;,</span>
+                      <span>  &#39;seeder&#39;: &#39;true&#39;,</span>
+                      <span>  &#39;uploadSpeed&#39;: &#39;0&#39;},</span>
+                      <span> {&#39;amChoking&#39;: &#39;false&#39;,</span>
+                      <span>  &#39;bitfield&#39;: &#39;ffffeff0fffffffbfffffff9fffffcfff7f4ffff&#39;,</span>
+                      <span>  &#39;downloadSpeed&#39;: &#39;8654&#39;,</span>
+                      <span>  &#39;ip&#39;: &#39;10.0.0.30&#39;,</span>
+                      <span>  &#39;peerChoking&#39;: &#39;false&#39;,</span>
+                      <span>  &#39;peerId&#39;: &#39;bittorrent client758&#39;,</span>
+                      <span>  &#39;port&#39;: &#39;37842&#39;,</span>
+                      <span>  &#39;seeder&#39;: &#39;false,</span>
+                      <span>  &#39;uploadSpeed&#39;: &#39;6890&#39;}]</span>
+                      </pre>
+                    </div>
+                  </div>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.getServers">
+                  <code>)</span></dt>
+                <dd>
+                  <p>This method returns currently connected HTTP(S)/FTP/SFTP servers of
+                    the download denoted by <em>gid</em> (string). The response is an array of
+                    structs and contains the following keys. Values are strings.</p>
+                  <dl>
+                    <dt><code>index</code></dt>
+                    <dd>Index of the file, starting at 1, in the same order as files appear in the
+                      multi-file metalink.</dd>
+                    <dt><code>servers</code></dt>
+                    <dd>
+                      <p>A list of structs which contain the following keys.</p>
+                      <dl>
+                        <dt><code>uri</code></dt>
+                        <dd>Original URI.</dd>
+                        <dt><code>currentUri</code></dt>
+                        <dd>This is the URI currently used for downloading. If redirection is
+                          involved, currentUri and uri may differ.</dd>
+                        <dt><code>downloadSpeed</code></dt>
+                        <dd>Download speed (byte/sec)</dd>
+                      </dl>
+                    </dd>
+                  </dl>
+                  <p><strong>JSON-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>urllib2</span><span>,</span> <span>json</span>
+                      <span>&gt;&gt;&gt; </span><span>from</span> <span>pprint</span> <span>import</span> <span>pprint</span>
+                      <span>&gt;&gt;&gt; </span><span>jsonreq</span> <span>=</span> <span>json</span><span>.</span><span>dumps</span><span>({</span><span>&#39;jsonrpc&#39;</span><span>:</span><span>&#39;2.0&#39;</span><span>,</span> <span>&#39;id&#39;</span><span>:</span><span>&#39;qwer&#39;</span><span>,</span>
+                      <span>... </span>                      <span>&#39;method&#39;</span><span>:</span><span>&#39;aria2.getServers&#39;</span><span>,</span>
+                      <span>... </span>                      <span>&#39;params&#39;</span><span>:[</span><span>&#39;2089b05ecca3d829&#39;</span><span>]})</span>
+                      <span>&gt;&gt;&gt; </span><span>c</span> <span>=</span> <span>urllib2</span><span>.</span><span>urlopen</span><span>(</span><span>&#39;http://localhost:6800/jsonrpc&#39;</span><span>,</span> <span>jsonreq</span><span>)</span>
+                      <span>&gt;&gt;&gt; </span><span>pprint</span><span>(</span><span>json</span><span>.</span><span>loads</span><span>(</span><span>c</span><span>.</span><span>read</span><span>()))</span>
+                      <span>{u&#39;id&#39;: u&#39;qwer&#39;,</span>
+                      <span> u&#39;jsonrpc&#39;: u&#39;2.0&#39;,</span>
+                      <span> u&#39;result&#39;: [{u&#39;index&#39;: u&#39;1&#39;,</span>
+                      <span>              u&#39;servers&#39;: [{u&#39;currentUri&#39;: u&#39;http://example.org/file&#39;,</span>
+                      <span>                            u&#39;downloadSpeed&#39;: u&#39;10467&#39;,</span>
+                      <span>                            u&#39;uri&#39;: u&#39;http://example.org/file&#39;}]}]}</span>
+                      </pre>
+                    </div>
+                  </div>
+                  <p><strong>XML-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>xmlrpclib</span>
+                      <span>&gt;&gt;&gt; </span><span>from</span> <span>pprint</span> <span>import</span> <span>pprint</span>
+                      <span>&gt;&gt;&gt; </span><span>s</span> <span>=</span> <span>xmlrpclib</span><span>.</span><span>ServerProxy</span><span>(</span><span>&#39;http://localhost:6800/rpc&#39;</span><span>)</span>
+                      <span>&gt;&gt;&gt; </span><span>r</span> <span>=</span> <span>s</span><span>.</span><span>aria2</span><span>.</span><span>getServers</span><span>(</span><span>&#39;2089b05ecca3d829&#39;</span><span>)</span>
+                      <span>&gt;&gt;&gt; </span><span>pprint</span><span>(</span><span>r</span><span>)</span>
+                      <span>[{&#39;index&#39;: &#39;1&#39;,</span>
+                      <span>  &#39;servers&#39;: [{&#39;currentUri&#39;: &#39;http://example.org/dl/file&#39;,</span>
+                      <span>               &#39;downloadSpeed&#39;: &#39;20285&#39;,</span>
+                      <span>               &#39;uri&#39;: &#39;http://example.org/file&#39;}]}]</span>
+                      </pre>
+                    </div>
+                  </div>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.tellActive">
+                  <code>aria2.</code><code>tellActive</code><span>(</span><span>[</span><em>secret</em><span>]</span><span>[</span>,
+                  <em>keys</em><span>]</span><span>)</span></dt>
+                <dd>
+                  <p>This method returns a list of active downloads. The response is an array of
+                    the same structs as returned by the <a href="#aria2.tellStatus" title="aria2.tellStatus"><code>aria2.tellStatus()</code></a>
+                    method.
+                    For the <em>keys</em> parameter, please refer to the <a href="#aria2.tellStatus" title="aria2.tellStatus"><code>aria2.tellStatus()</code></a> method.</p>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.tellWaiting">
+                  <code>[</span>, <em>keys</em><span>]</span><span>)</span></dt>
+                <dd>
+                  <p>This method returns a list of waiting downloads, including paused
+                    ones.
+                    <em>offset</em> is an integer and specifies the offset from
+                    the download waiting at the front.
+                    <em>num</em> is an integer and specifies the max. number of downloads to be returned.
+                    For the <em>keys</em> parameter, please refer to the <a href="#aria2.tellStatus" title="aria2.tellStatus"><code>aria2.tellStatus()</code></a> method.</p>
+                  <p>If <em>offset</em> is a positive integer, this method returns downloads in the
+                    range of [<em>offset</em>, <em>offset</em> + <em>num</em>).</p>
+                  <p><em>offset</em> can be a negative integer. <em>offset</em> == -1 points last
+                    download in the waiting queue and <em>offset</em> == -2 points the download
+                    before the last download, and so on. Downloads in the response are
+                    in reversed order then.</p>
+                  <p>For example, imagine three downloads &quot;A&quot;,&quot;B&quot; and &quot;C&quot; are waiting
+                    in this order. <code>aria2.tellWaiting(0,</span> <span>1)</code> returns
+                    <code>[&quot;A&quot;]</code>. <code>aria2.tellWaiting(1,</span> <span>2)</code> returns <code
+                     ><span>[&quot;B&quot;,</span> <span>&quot;C&quot;]</code>.
+                    <code>aria2.tellWaiting(-1,</span> <span>2)</code> returns <code>[&quot;C&quot;,</span> <span
+                       >&quot;B&quot;]</code>.</p>
+                  <p>The response is an array of the same structs as returned by
+                    <a href="#aria2.tellStatus" title="aria2.tellStatus"><code>aria2.tellStatus()</code></a> method.</p>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.tellStopped">
+                  <code>[</span>, <em>keys</em><span>]</span><span>)</span></dt>
+                <dd>
+                  <p>This method returns a list of stopped downloads.
+                    <em>offset</em> is an integer and specifies the offset from the least recently
+                    stopped download.
+                    <em>num</em> is an integer and specifies the max. number of downloads to be returned.
+                    For the <em>keys</em> parameter, please refer to the <a href="#aria2.tellStatus" title="aria2.tellStatus"><code>aria2.tellStatus()</code></a> method.</p>
+                  <p><em>offset</em> and <em>num</em> have the same semantics as described in the
+                    <a href="#aria2.tellWaiting" title="aria2.tellWaiting"><code>aria2.tellWaiting()</code></a> method.</p>
+                  <p>The response is an array of the same structs as returned by the
+                    <a href="#aria2.tellStatus" title="aria2.tellStatus"><code>aria2.tellStatus()</code></a> method.</p>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.changePosition">
+                  <code>aria2.</code><code>changePosition</code><span>(</span><span>[</span><em>secret</em>, <span>]</span><em>gid</em>, <em>pos</em>,
+                  <em>how</em><span>)</span></dt>
+                <dd>
+                  <p>This method changes the position of the download denoted by
+                    <em>gid</em> in the queue.
+                    <em>pos</em> is an integer.
+                    <em>how</em> is a string. If <em>how</em> is <code>POS_SET</code>, it moves the download to a
+                    position relative to the beginning of the queue. If <em>how</em> is <code>POS_CUR</code>, it
+                    moves the download to a position relative to the current position. If <em>how</em> is
+                    <code>POS_END</code>, it moves the download to a position relative to the end of the
+                    queue. If the destination position is less than 0 or beyond the end of
+                    the queue, it moves the download to the beginning or the end of the
+                    queue respectively. The response is an integer denoting the resulting
+                    position.</p>
+                  <p>For example, if GID#2089b05ecca3d829 is currently in position 3,
+                    <code>aria2.changePosition('2089b05ecca3d829',</span> <span>-1,</span> <span>'POS_CUR')</code> will
+                    change its position to 2. Additionally
+                    <code>aria2.changePosition('2089b05ecca3d829',</span> <span>0,</span> <span>'POS_SET')</code> will
+                    change its position to 0 (the beginning of the queue).</p>
+                  <p>The following examples move the download GID#2089b05ecca3d829 to the
+                    front of the queue.</p>
+                  <p><strong>JSON-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>urllib2</span><span>,</span> <span>json</span>
+                      <span>&gt;&gt;&gt; </span><span>from</span> <span>pprint</span> <span>import</span> <span>pprint</span>
+                      <span>&gt;&gt;&gt; </span><span>jsonreq</span> <span>=</span> <span>json</span><span>.</span><span>dumps</span><span>({</span><span>&#39;jsonrpc&#39;</span><span>:</span><span>&#39;2.0&#39;</span><span>,</span> <span>&#39;id&#39;</span><span>:</span><span>&#39;qwer&#39;</span><span>,</span>
+                      <span>... </span>                      <span>&#39;method&#39;</span><span>:</span><span>&#39;aria2.changePosition&#39;</span><span>,</span>
+                      <span>... </span>                      <span>&#39;params&#39;</span><span>:[</span><span>&#39;2089b05ecca3d829&#39;</span><span>,</span> <span>0</span><span>,</span> <span>&#39;POS_SET&#39;</span><span>]})</span>
+                      <span>&gt;&gt;&gt; </span><span>c</span> <span>=</span> <span>urllib2</span><span>.</span><span>urlopen</span><span>(</span><span>&#39;http://localhost:6800/jsonrpc&#39;</span><span>,</span> <span>jsonreq</span><span>)</span>
+                      <span>&gt;&gt;&gt; </span><span>pprint</span><span>(</span><span>json</span><span>.</span><span>loads</span><span>(</span><span>c</span><span>.</span><span>read</span><span>()))</span>
+                      <span>{u&#39;id&#39;: u&#39;qwer&#39;, u&#39;jsonrpc&#39;: u&#39;2.0&#39;, u&#39;result&#39;: 0}</span>
+                      </pre>
+                    </div>
+                  </div>
+                  <p><strong>XML-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>xmlrpclib</span>
+                      <span>&gt;&gt;&gt; </span><span>s</span> <span>=</span> <span>xmlrpclib</span><span>.</span><span>ServerProxy</span><span>(</span><span>&#39;http://localhost:6800/rpc&#39;</span><span>)</span>
+                      <span>&gt;&gt;&gt; </span><span>s</span><span>.</span><span>aria2</span><span>.</span><span>changePosition</span><span>(</span><span>&#39;2089b05ecca3d829&#39;</span><span>,</span> <span>0</span><span>,</span> <span>&#39;POS_SET&#39;</span><span>)</span>
+                      <span>0</span>
+                      </pre>
+                    </div>
+                  </div>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.changeUri">
+                  <code>aria2.</code><code>changeUri</code><span>(</span><span>[</span><em>secret</em>, <span>]</span><em>gid</em>, <em>fileIndex</em>,
+                  <em>delUris</em>, <em>addUris</em><span>[</span>, <em>position</em><span>]</span><span>)</span><a href="#aria2.changeUri"
+                    title="Permalink to this definition"></a></dt>
+                <dd>
+                  <p>This method removes the URIs in <em>delUris</em> from and appends the URIs in
+                    <em>addUris</em> to download denoted by <em>gid</em>. <em>delUris</em> and <em>addUris</em> are
+                    lists of strings. A download can contain multiple files and URIs are
+                    attached to each file. <em>fileIndex</em> is used to select which file to
+                    remove/attach given URIs. <em>fileIndex</em> is 1-based. <em>position</em> is used
+                    to specify where URIs are inserted in the existing waiting URI
+                    list. <em>position</em> is 0-based. When <em>position</em> is omitted, URIs are
+                    appended to the back of the list. This method first executes the removal
+                    and then the addition. <em>position</em> is the position after URIs are removed,
+                    not the position when this method is called. When removing an URI, if
+                    the same URIs exist in download, only one of them is removed for each URI
+                    in <em>delUris</em>. In other words, if there are three URIs
+                    <code>http://example.org/aria2</code> and you want remove them all, you have to
+                    specify (at least) 3 <code>http://example.org/aria2</code> in <em>delUris</em>. This
+                    method returns a list which contains two integers. The first integer is
+                    the number of URIs deleted. The second integer is the number of URIs
+                    added.</p>
+                  <p>The following examples add the URI <code>http://example.org/file</code> to the
+                    file whose index is <code>1</code> and belongs to the download
+                    GID#2089b05ecca3d829.</p>
+                  <p><strong>JSON-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>urllib2</span><span>,</span> <span>json</span>
+                      <span>&gt;&gt;&gt; </span><span>from</span> <span>pprint</span> <span>import</span> <span>pprint</span>
+                      <span>&gt;&gt;&gt; </span><span>jsonreq</span> <span>=</span> <span>json</span><span>.</span><span>dumps</span><span>({</span><span>&#39;jsonrpc&#39;</span><span>:</span><span>&#39;2.0&#39;</span><span>,</span> <span>&#39;id&#39;</span><span>:</span><span>&#39;qwer&#39;</span><span>,</span>
+                      <span>... </span>                      <span>&#39;method&#39;</span><span>:</span><span>&#39;aria2.changeUri&#39;</span><span>,</span>
+                      <span>... </span>                      <span>&#39;params&#39;</span><span>:[</span><span>&#39;2089b05ecca3d829&#39;</span><span>,</span> <span>1</span><span>,</span> <span>[],</span>
+                      <span>                                    [&#39;http://example.org/file&#39;]]})</span>
+                      <span>&gt;&gt;&gt; </span><span>c</span> <span>=</span> <span>urllib2</span><span>.</span><span>urlopen</span><span>(</span><span>&#39;http://localhost:6800/jsonrpc&#39;</span><span>,</span> <span>jsonreq</span><span>)</span>
+                      <span>&gt;&gt;&gt; </span><span>pprint</span><span>(</span><span>json</span><span>.</span><span>loads</span><span>(</span><span>c</span><span>.</span><span>read</span><span>()))</span>
+                      <span>{u&#39;id&#39;: u&#39;qwer&#39;, u&#39;jsonrpc&#39;: u&#39;2.0&#39;, u&#39;result&#39;: [0, 1]}</span>
+                      </pre>
+                    </div>
+                  </div>
+                  <p><strong>XML-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>xmlrpclib</span>
+                        <span>&gt;&gt;&gt; </span><span>s</span> <span>=</span> <span>xmlrpclib</span><span>.</span><span>ServerProxy</span><span>(</span><span>&#39;http://localhost:6800/rpc&#39;</span><span>)</span>
+                        <span>&gt;&gt;&gt; </span><span>s</span><span>.</span><span>aria2</span><span>.</span><span>changeUri</span><span>(</span><span>&#39;2089b05ecca3d829&#39;</span><span>,</span> <span>1</span><span>,</span> <span>[],</span>
+                        <span>                      [&#39;http://example.org/file&#39;])</span>
+                        <span>[0, 1]</span>
+                        </pre>
+                    </div>
+                  </div>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.getOption">
+                  <code>)</span></dt>
+                <dd>
+                  <p>This method returns options of the download denoted by <em>gid</em>. The
+                    response is a struct where keys are the names of options.
+                    The values are strings.
+                    Note that this method does not return options which
+                    have no default value and have not been set on the command-line, in
+                    configuration files or RPC methods.</p>
+                  <p>The following examples get options of the download
+                    GID#2089b05ecca3d829.</p>
+                  <p><strong>JSON-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>urllib2</span><span>,</span> <span>json</span>
+                      <span>&gt;&gt;&gt; </span><span>from</span> <span>pprint</span> <span>import</span> <span>pprint</span>
+                      <span>&gt;&gt;&gt; </span><span>jsonreq</span> <span>=</span> <span>json</span><span>.</span><span>dumps</span><span>({</span><span>&#39;jsonrpc&#39;</span><span>:</span><span>&#39;2.0&#39;</span><span>,</span> <span>&#39;id&#39;</span><span>:</span><span>&#39;qwer&#39;</span><span>,</span>
+                      <span>... </span>                      <span>&#39;method&#39;</span><span>:</span><span>&#39;aria2.getOption&#39;</span><span>,</span>
+                      <span>... </span>                      <span>&#39;params&#39;</span><span>:[</span><span>&#39;2089b05ecca3d829&#39;</span><span>]})</span>
+                      <span>&gt;&gt;&gt; </span><span>c</span> <span>=</span> <span>urllib2</span><span>.</span><span>urlopen</span><span>(</span><span>&#39;http://localhost:6800/jsonrpc&#39;</span><span>,</span> <span>jsonreq</span><span>)</span>
+                      <span>&gt;&gt;&gt; </span><span>pprint</span><span>(</span><span>json</span><span>.</span><span>loads</span><span>(</span><span>c</span><span>.</span><span>read</span><span>()))</span>
+                      <span>{u&#39;id&#39;: u&#39;qwer&#39;,</span>
+                      <span> u&#39;jsonrpc&#39;: u&#39;2.0&#39;,</span>
+                      <span> u&#39;result&#39;: {u&#39;allow-overwrite&#39;: u&#39;false&#39;,</span>
+                      <span>             u&#39;allow-piece-length-change&#39;: u&#39;false&#39;,</span>
+                      <span>             u&#39;always-resume&#39;: u&#39;true&#39;,</span>
+                      <span>             u&#39;async-dns&#39;: u&#39;true&#39;,</span>
+                      <span> ...</span>
+                      </pre>
+                    </div>
+                  </div>
+                  <p><strong>XML-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>xmlrpclib</span>
+                        <span>&gt;&gt;&gt; </span><span>from</span> <span>pprint</span> <span>import</span> <span>pprint</span>
+                        <span>&gt;&gt;&gt; </span><span>s</span> <span>=</span> <span>xmlrpclib</span><span>.</span><span>ServerProxy</span><span>(</span><span>&#39;http://localhost:6800/rpc&#39;</span><span>)</span>
+                        <span>&gt;&gt;&gt; </span><span>r</span> <span>=</span> <span>s</span><span>.</span><span>aria2</span><span>.</span><span>getOption</span><span>(</span><span>&#39;2089b05ecca3d829&#39;</span><span>)</span>
+                        <span>&gt;&gt;&gt; </span><span>pprint</span><span>(</span><span>r</span><span>)</span>
+                        <span>{&#39;allow-overwrite&#39;: &#39;false&#39;,</span>
+                        <span> &#39;allow-piece-length-change&#39;: &#39;false&#39;,</span>
+                        <span> &#39;always-resume&#39;: &#39;true&#39;,</span>
+                        <span> &#39;async-dns&#39;: &#39;true&#39;,</span>
+                        <span> ....</span>
+                        </pre>
+                    </div>
+                  </div>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.changeOption">
+                  <code>)</span></dt>
+                <dd>
+                  <p>This method changes options of the download denoted by <em>gid</em> (string)
+                    dynamically. <em>options</em> is a struct.
+                    The options listed in <a href="#id2">Input File</a> subsection are available,
+                    <strong>except</strong> for following options:</p>
+                  <ul>
+                    <li><a href="#cmdoption-dry-run"><code>dry-run</code></a></li>
+                    <li><a href="#cmdoption-metalink-base-uri"><code>metalink-base-uri</code></a></li>
+                    <li><a href="#cmdoption-parameterized-uri"><code>parameterized-uri</code></a></li>
+                    <li><a href="#cmdoption-pause"><code>pause</code></a></li>
+                    <li><a href="#cmdoption-piece-length"><code>piece-length</code></a></li>
+                    <li><a href="#cmdoption-rpc-save-upload-metadata"><code>rpc-save-upload-metadata</code></a></li>
+                  </ul>
+                  <p>Except for the following options, changing the other options of
+                    active download makes it restart (restart itself is managed by
+                    aria2, and no user intervention is required):</p>
+                  <ul>
+                    <li><a href="#cmdoption-bt-max-peers"><code>bt-max-peers</code></a></li>
+                    <li><a href="#cmdoption-bt-request-peer-speed-limit"><code>bt-request-peer-speed-limit</code></a></li>
+                    <li><a href="#cmdoption-bt-remove-unselected-file"><code>bt-remove-unselected-file</code></a></li>
+                    <li><a href="#cmdoption-force-save"><code>force-save</code></a></li>
+                    <li><a href="#cmdoption-max-download-limit"><code>max-download-limit</code></a></li>
+                    <li><a href="#cmdoption-max-upload-limit"><code>max-upload-limit</code></a></li>
+                  </ul>
+                  <p>This method returns <code>OK</code> for success.</p>
+                  <p>The following examples set the <a href="#cmdoption-max-download-limit"><code>max-download-limit</code></a> option to <code
+                     ><span>20K</code> for the download
+                    GID#2089b05ecca3d829.</p>
+                  <p><strong>JSON-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>urllib2</span><span>,</span> <span>json</span>
+                        <span>&gt;&gt;&gt; </span><span>from</span> <span>pprint</span> <span>import</span> <span>pprint</span>
+                        <span>&gt;&gt;&gt; </span><span>jsonreq</span> <span>=</span> <span>json</span><span>.</span><span>dumps</span><span>({</span><span>&#39;jsonrpc&#39;</span><span>:</span><span>&#39;2.0&#39;</span><span>,</span> <span>&#39;id&#39;</span><span>:</span><span>&#39;qwer&#39;</span><span>,</span>
+                        <span>... </span>                      <span>&#39;method&#39;</span><span>:</span><span>&#39;aria2.changeOption&#39;</span><span>,</span>
+                        <span>... </span>                      <span>&#39;params&#39;</span><span>:[</span><span>&#39;2089b05ecca3d829&#39;</span><span>,</span>
+                        <span>... </span>                                <span>{</span><span>&#39;max-download-limit&#39;</span><span>:</span><span>&#39;10K&#39;</span><span>}]})</span>
+                        <span>&gt;&gt;&gt; </span><span>c</span> <span>=</span> <span>urllib2</span><span>.</span><span>urlopen</span><span>(</span><span>&#39;http://localhost:6800/jsonrpc&#39;</span><span>,</span> <span>jsonreq</span><span>)</span>
+                        <span>&gt;&gt;&gt; </span><span>pprint</span><span>(</span><span>json</span><span>.</span><span>loads</span><span>(</span><span>c</span><span>.</span><span>read</span><span>()))</span>
+                        <span>{u&#39;id&#39;: u&#39;qwer&#39;, u&#39;jsonrpc&#39;: u&#39;2.0&#39;, u&#39;result&#39;: u&#39;OK&#39;}</span>
+                        </pre>
+                    </div>
+                  </div>
+                  <p><strong>XML-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>xmlrpclib</span>
+                      <span>&gt;&gt;&gt; </span><span>s</span> <span>=</span> <span>xmlrpclib</span><span>.</span><span>ServerProxy</span><span>(</span><span>&#39;http://localhost:6800/rpc&#39;</span><span>)</span>
+                      <span>&gt;&gt;&gt; </span><span>s</span><span>.</span><span>aria2</span><span>.</span><span>changeOption</span><span>(</span><span>&#39;2089b05ecca3d829&#39;</span><span>,</span> <span>{</span><span>&#39;max-download-limit&#39;</span><span>:</span><span>&#39;20K&#39;</span><span>})</span>
+                      <span>&#39;OK&#39;</span>
+                      </pre>
+                    </div>
+                  </div>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.getGlobalOption">
+                  <code>aria2.</code><code>getGlobalOption</code><span>(</span><span>[</span><em>secret</em><span>]</span><span>)</span><a
+                    href="#aria2.getGlobalOption" title="Permalink to this definition"></a></dt>
+                <dd>
+                  <p>This method returns the global options. The response is a struct. Its keys
+                    are the names of options. Values are strings.
+                    Note that this method does not return options which have no default
+                    value and have not been set on the command-line, in configuration
+                    files or RPC methods. Because global options are used as a template
+                    for the options of newly added downloads, the response contains keys
+                    returned by the <a href="#aria2.getOption" title="aria2.getOption"><code>aria2.getOption()</code></a> method.</p>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.changeGlobalOption">
+                  <code>)</span></dt>
+                <dd>
+                  <p>This method changes global options dynamically. <em>options</em> is a struct.
+                    The following options are available:</p>
+                  <ul>
+                    <li><a href="#cmdoption-bt-max-open-files"><code>bt-max-open-files</code></a></li>
+                    <li><a href="#cmdoption-download-result"><code>download-result</code></a></li>
+                    <li><a href="#cmdoption-keep-unfinished-download-result"><code>keep-unfinished-download-result</code></a></li>
+                    <li><a href="#cmdoption-l"><code>log</code></a></li>
+                    <li><a href="#cmdoption-log-level"><code>log-level</code></a></li>
+                    <li><a href="#cmdoption-j"><code>max-concurrent-downloads</code></a></li>
+                    <li><a href="#cmdoption-max-download-result"><code>max-download-result</code></a></li>
+                    <li><a href="#cmdoption-max-overall-download-limit"><code>max-overall-download-limit</code></a></li>
+                    <li><a href="#cmdoption-max-overall-upload-limit"><code>max-overall-upload-limit</code></a></li>
+                    <li><a href="#cmdoption-optimize-concurrent-downloads"><code>optimize-concurrent-downloads</code></a></li>
+                    <li><a href="#cmdoption-save-cookies"><code>save-cookies</code></a></li>
+                    <li><a href="#cmdoption-save-session"><code>save-session</code></a></li>
+                    <li><a href="#cmdoption-server-stat-of"><code>server-stat-of</code></a></li>
+                  </ul>
+                  <p>In addition, options listed in the <a href="#id2">Input File</a> subsection
+                    are available, <strong>except</strong> for following options:
+                    <a href="#cmdoption-checksum"><code>checksum</code></a>,
+                    <a href="#cmdoption-index-out"><code>index-out</code></a>,
+                    <a href="#cmdoption-o"><code>out</code></a>,
+                    <a href="#cmdoption-pause"><code>pause</code></a> and
+                    <a href="#cmdoption-select-file"><code>select-file</code></a>.</p>
+                  <p>With the <a href="#cmdoption-l"><code>log</code></a> option, you can dynamically start logging or
+                    change log file. To stop logging, specify an empty string(&quot;&quot;) as the parameter
+                    value. Note that log file is always opened in append mode. This method
+                    returns <code>OK</code> for success.</p>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.getGlobalStat">
+                  <code>aria2.</code><code>getGlobalStat</code><span>(</span><span>[</span><em>secret</em><span>]</span><span>)</span><a
+                    href="#aria2.getGlobalStat" title="Permalink to this definition"></a></dt>
+                <dd>
+                  <p>This method returns global statistics such as the overall download and
+                    upload speeds. The response is a struct and contains the following
+                    keys. Values are strings.</p>
+                  <dl>
+                    <dt><code>downloadSpeed</code></dt>
+                    <dd>Overall download speed (byte/sec).</dd>
+                    <dt><code>uploadSpeed</code></dt>
+                    <dd>Overall upload speed(byte/sec).</dd>
+                    <dt><code>numActive</code></dt>
+                    <dd>The number of active downloads.</dd>
+                    <dt><code>numWaiting</code></dt>
+                    <dd>The number of waiting downloads.</dd>
+                    <dt><code>numStopped</code></dt>
+                    <dd>The number of stopped downloads in the current session. This value
+                      is capped by the <a href="#cmdoption-max-download-result"><code>--max-download-result</code></a> option.</dd>
+                    <dt><code>numStoppedTotal</code></dt>
+                    <dd>The number of stopped downloads in the current session and <em>not</em>
+                      capped by the <a href="#cmdoption-max-download-result"><code>--max-download-result</code></a> option.</dd>
+                  </dl>
+                  <p><strong>JSON-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>urllib2</span><span>,</span> <span>json</span>
+                      <span>&gt;&gt;&gt; </span><span>from</span> <span>pprint</span> <span>import</span> <span>pprint</span>
+                      <span>&gt;&gt;&gt; </span><span>jsonreq</span> <span>=</span> <span>json</span><span>.</span><span>dumps</span><span>({</span><span>&#39;jsonrpc&#39;</span><span>:</span><span>&#39;2.0&#39;</span><span>,</span> <span>&#39;id&#39;</span><span>:</span><span>&#39;qwer&#39;</span><span>,</span>
+                      <span>... </span>                      <span>&#39;method&#39;</span><span>:</span><span>&#39;aria2.getGlobalStat&#39;</span><span>})</span>
+                      <span>&gt;&gt;&gt; </span><span>c</span> <span>=</span> <span>urllib2</span><span>.</span><span>urlopen</span><span>(</span><span>&#39;http://localhost:6800/jsonrpc&#39;</span><span>,</span> <span>jsonreq</span><span>)</span>
+                      <span>&gt;&gt;&gt; </span><span>pprint</span><span>(</span><span>json</span><span>.</span><span>loads</span><span>(</span><span>c</span><span>.</span><span>read</span><span>()))</span>
+                      <span>{u&#39;id&#39;: u&#39;qwer&#39;,</span>
+                      <span> u&#39;jsonrpc&#39;: u&#39;2.0&#39;,</span>
+                      <span> u&#39;result&#39;: {u&#39;downloadSpeed&#39;: u&#39;21846&#39;,</span>
+                      <span>             u&#39;numActive&#39;: u&#39;2&#39;,</span>
+                      <span>             u&#39;numStopped&#39;: u&#39;0&#39;,</span>
+                      <span>             u&#39;numWaiting&#39;: u&#39;0&#39;,</span>
+                      <span>             u&#39;uploadSpeed&#39;: u&#39;0&#39;}}</span>
+                      </pre>
+                    </div>
+                  </div>
+                  <p><strong>XML-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>xmlrpclib</span>
+                        <span>&gt;&gt;&gt; </span><span>from</span> <span>pprint</span> <span>import</span> <span>pprint</span>
+                        <span>&gt;&gt;&gt; </span><span>s</span> <span>=</span> <span>xmlrpclib</span><span>.</span><span>ServerProxy</span><span>(</span><span>&#39;http://localhost:6800/rpc&#39;</span><span>)</span>
+                        <span>&gt;&gt;&gt; </span><span>r</span> <span>=</span> <span>s</span><span>.</span><span>aria2</span><span>.</span><span>getGlobalStat</span><span>()</span>
+                        <span>&gt;&gt;&gt; </span><span>pprint</span><span>(</span><span>r</span><span>)</span>
+                        <span>{&#39;downloadSpeed&#39;: &#39;23136&#39;,</span>
+                        <span> &#39;numActive&#39;: &#39;2&#39;,</span>
+                        <span> &#39;numStopped&#39;: &#39;0&#39;,</span>
+                        <span> &#39;numWaiting&#39;: &#39;0&#39;,</span>
+                        <span> &#39;uploadSpeed&#39;: &#39;0&#39;}</span>
+                        </pre>
+                    </div>
+                  </div>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.purgeDownloadResult">
+                  <code>aria2.</code><code>purgeDownloadResult</code><span>(</span><span>[</span><em>secret</em><span>]</span><span>)</span><a
+                    href="#aria2.purgeDownloadResult" title="Permalink to this definition"></a></dt>
+                <dd>
+                  <p>This method purges completed/error/removed downloads to free memory.
+                    This method returns <code>OK</code>.</p>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.removeDownloadResult">
+                  <code>)</span></dt>
+                <dd>
+                  <p>This method removes a completed/error/removed download denoted by <em>gid</em>
+                    from memory. This method returns <code>OK</code> for success.</p>
+                  <p>The following examples remove the download result of the download
+                    GID#2089b05ecca3d829.</p>
+                  <p><strong>JSON-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>urllib2</span><span>,</span> <span>json</span>
+                      <span>&gt;&gt;&gt; </span><span>from</span> <span>pprint</span> <span>import</span> <span>pprint</span>
+                      <span>&gt;&gt;&gt; </span><span>jsonreq</span> <span>=</span> <span>json</span><span>.</span><span>dumps</span><span>({</span><span>&#39;jsonrpc&#39;</span><span>:</span><span>&#39;2.0&#39;</span><span>,</span> <span>&#39;id&#39;</span><span>:</span><span>&#39;qwer&#39;</span><span>,</span>
+                      <span>... </span>                      <span>&#39;method&#39;</span><span>:</span><span>&#39;aria2.removeDownloadResult&#39;</span><span>,</span>
+                      <span>... </span>                      <span>&#39;params&#39;</span><span>:[</span><span>&#39;2089b05ecca3d829&#39;</span><span>]})</span>
+                      <span>&gt;&gt;&gt; </span><span>c</span> <span>=</span> <span>urllib2</span><span>.</span><span>urlopen</span><span>(</span><span>&#39;http://localhost:6800/jsonrpc&#39;</span><span>,</span> <span>jsonreq</span><span>)</span>
+                      <span>&gt;&gt;&gt; </span><span>pprint</span><span>(</span><span>json</span><span>.</span><span>loads</span><span>(</span><span>c</span><span>.</span><span>read</span><span>()))</span>
+                      <span>{u&#39;id&#39;: u&#39;qwer&#39;, u&#39;jsonrpc&#39;: u&#39;2.0&#39;, u&#39;result&#39;: u&#39;OK&#39;}</span>
+                      </pre>
+                    </div>
+                  </div>
+                  <p><strong>XML-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>xmlrpclib</span>
+                      <span>&gt;&gt;&gt; </span><span>s</span> <span>=</span> <span>xmlrpclib</span><span>.</span><span>ServerProxy</span><span>(</span><span>&#39;http://localhost:6800/rpc&#39;</span><span>)</span>
+                      <span>&gt;&gt;&gt; </span><span>s</span><span>.</span><span>aria2</span><span>.</span><span>removeDownloadResult</span><span>(</span><span>&#39;2089b05ecca3d829&#39;</span><span>)</span>
+                      <span>&#39;OK&#39;</span>
+                      </pre>
+                    </div>
+                  </div>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.getVersion">
+                  <code>aria2.</code><code>getVersion</code><span>(</span><span>[</span><em>secret</em><span>]</span><span>)</span><a
+                    href="#aria2.getVersion" title="Permalink to this definition"></a></dt>
+                <dd>
+                  <p>This method returns the version of aria2 and the list of enabled
+                    features. The response is a struct and contains following keys.</p>
+                  <dl>
+                    <dt><code>version</code></dt>
+                    <dd>Version number of aria2 as a string.</dd>
+                    <dt><code>enabledFeatures</code></dt>
+                    <dd>List of enabled features. Each feature is given as a string.</dd>
+                  </dl>
+                  <p><strong>JSON-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>urllib2</span><span>,</span> <span>json</span>
+                        <span>&gt;&gt;&gt; </span><span>from</span> <span>pprint</span> <span>import</span> <span>pprint</span>
+                        <span>&gt;&gt;&gt; </span><span>jsonreq</span> <span>=</span> <span>json</span><span>.</span><span>dumps</span><span>({</span><span>&#39;jsonrpc&#39;</span><span>:</span><span>&#39;2.0&#39;</span><span>,</span> <span>&#39;id&#39;</span><span>:</span><span>&#39;qwer&#39;</span><span>,</span>
+                        <span>... </span>                      <span>&#39;method&#39;</span><span>:</span><span>&#39;aria2.getVersion&#39;</span><span>})</span>
+                        <span>&gt;&gt;&gt; </span><span>c</span> <span>=</span> <span>urllib2</span><span>.</span><span>urlopen</span><span>(</span><span>&#39;http://localhost:6800/jsonrpc&#39;</span><span>,</span> <span>jsonreq</span><span>)</span>
+                        <span>&gt;&gt;&gt; </span><span>pprint</span><span>(</span><span>json</span><span>.</span><span>loads</span><span>(</span><span>c</span><span>.</span><span>read</span><span>()))</span>
+                        <span>{u&#39;id&#39;: u&#39;qwer&#39;,</span>
+                        <span> u&#39;jsonrpc&#39;: u&#39;2.0&#39;,</span>
+                        <span> u&#39;result&#39;: {u&#39;enabledFeatures&#39;: [u&#39;Async DNS&#39;,</span>
+                        <span>                                  u&#39;BitTorrent&#39;,</span>
+                        <span>                                  u&#39;Firefox3 Cookie&#39;,</span>
+                        <span>                                  u&#39;GZip&#39;,</span>
+                        <span>                                  u&#39;HTTPS&#39;,</span>
+                        <span>                                  u&#39;Message Digest&#39;,</span>
+                        <span>                                  u&#39;Metalink&#39;,</span>
+                        <span>                                  u&#39;XML-RPC&#39;],</span>
+                        <span>             u&#39;version&#39;: u&#39;1.11.0&#39;}}</span>
+                        </pre>
+                    </div>
+                  </div>
+                  <p><strong>XML-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>xmlrpclib</span>
+                          <span>&gt;&gt;&gt; </span><span>from</span> <span>pprint</span> <span>import</span> <span>pprint</span>
+                          <span>&gt;&gt;&gt; </span><span>s</span> <span>=</span> <span>xmlrpclib</span><span>.</span><span>ServerProxy</span><span>(</span><span>&#39;http://localhost:6800/rpc&#39;</span><span>)</span>
+                          <span>&gt;&gt;&gt; </span><span>r</span> <span>=</span> <span>s</span><span>.</span><span>aria2</span><span>.</span><span>getVersion</span><span>()</span>
+                          <span>&gt;&gt;&gt; </span><span>pprint</span><span>(</span><span>r</span><span>)</span>
+                          <span>{&#39;enabledFeatures&#39;: [&#39;Async DNS&#39;,</span>
+                          <span>                     &#39;BitTorrent&#39;,</span>
+                          <span>                     &#39;Firefox3 Cookie&#39;,</span>
+                          <span>                     &#39;GZip&#39;,</span>
+                          <span>                     &#39;HTTPS&#39;,</span>
+                          <span>                     &#39;Message Digest&#39;,</span>
+                          <span>                     &#39;Metalink&#39;,</span>
+                          <span>                     &#39;XML-RPC&#39;],</span>
+                          <span> &#39;version&#39;: &#39;1.11.0&#39;}</span>
+                          </pre>
+                    </div>
+                  </div>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.getSessionInfo">
+                  <code>aria2.</code><code>getSessionInfo</code><span>(</span><span>[</span><em>secret</em><span>]</span><span>)</span><a
+                    href="#aria2.getSessionInfo" title="Permalink to this definition"></a></dt>
+                <dd>
+                  <p>This method returns session information.
+                    The response is a struct and contains following key.</p>
+                  <dl>
+                    <dt><code>sessionId</code></dt>
+                    <dd>Session ID, which is generated each time when aria2 is invoked.</dd>
+                  </dl>
+                  <p><strong>JSON-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>urllib2</span><span>,</span> <span>json</span>
+                      <span>&gt;&gt;&gt; </span><span>from</span> <span>pprint</span> <span>import</span> <span>pprint</span>
+                      <span>&gt;&gt;&gt; </span><span>jsonreq</span> <span>=</span> <span>json</span><span>.</span><span>dumps</span><span>({</span><span>&#39;jsonrpc&#39;</span><span>:</span><span>&#39;2.0&#39;</span><span>,</span> <span>&#39;id&#39;</span><span>:</span><span>&#39;qwer&#39;</span><span>,</span>
+                      <span>... </span>                      <span>&#39;method&#39;</span><span>:</span><span>&#39;aria2.getSessionInfo&#39;</span><span>})</span>
+                      <span>&gt;&gt;&gt; </span><span>c</span> <span>=</span> <span>urllib2</span><span>.</span><span>urlopen</span><span>(</span><span>&#39;http://localhost:6800/jsonrpc&#39;</span><span>,</span> <span>jsonreq</span><span>)</span>
+                      <span>&gt;&gt;&gt; </span><span>pprint</span><span>(</span><span>json</span><span>.</span><span>loads</span><span>(</span><span>c</span><span>.</span><span>read</span><span>()))</span>
+                      <span>{u&#39;id&#39;: u&#39;qwer&#39;,</span>
+                      <span> u&#39;jsonrpc&#39;: u&#39;2.0&#39;,</span>
+                      <span> u&#39;result&#39;: {u&#39;sessionId&#39;: u&#39;cd6a3bc6a1de28eb5bfa181e5f6b916d44af31a9&#39;}}</span>
+                      </pre>
+                    </div>
+                  </div>
+                  <p><strong>XML-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>xmlrpclib</span>
+                      <span>&gt;&gt;&gt; </span><span>s</span> <span>=</span> <span>xmlrpclib</span><span>.</span><span>ServerProxy</span><span>(</span><span>&#39;http://localhost:6800/rpc&#39;</span><span>)</span>
+                      <span>&gt;&gt;&gt; </span><span>s</span><span>.</span><span>aria2</span><span>.</span><span>getSessionInfo</span><span>()</span>
+                      <span>{&#39;sessionId&#39;: &#39;cd6a3bc6a1de28eb5bfa181e5f6b916d44af31a9&#39;}</span>
+                      </pre>
+                    </div>
+                  </div>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.shutdown">
+                  <code>aria2.</code><code>shutdown</code><span>(</span><span>[</span><em>secret</em><span>]</span><span>)</span><a
+                    href="#aria2.shutdown" title="Permalink to this definition"></a></dt>
+                <dd>
+                  <p>This method shuts down aria2. This method returns <code>OK</code>.</p>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.forceShutdown">
+                  <code>aria2.</code><code>forceShutdown</code><span>(</span><span>[</span><em>secret</em><span>]</span><span>)</span><a
+                    href="#aria2.forceShutdown" title="Permalink to this definition"></a></dt>
+                <dd>
+                  <p>This method shuts down <code>aria2()</code>. This method behaves like
+                    :func:'aria2.shutdown` without performing any actions which take time,
+                    such as contacting BitTorrent trackers to unregister downloads first.
+                    This method returns <code>OK</code>.</p>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="aria2.saveSession">
+                  <code>aria2.</code><code>saveSession</code><span>(</span><span>[</span><em>secret</em><span>]</span><span>)</span><a
+                    href="#aria2.saveSession" title="Permalink to this definition"></a></dt>
+                <dd>
+                  <p>This method saves the current session to a file specified by the
+                    <a href="#cmdoption-save-session"><code>--save-session</code></a> option. This method returns <code
+                     ><span>OK</code> if it
+                    succeeds.</p>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="system.multicall">
+                  <code>system.</code><code>multicall</code><span>(</span><em>methods</em><span>)</span><a href="#system.multicall"
+                    title="Permalink to this definition"></a></dt>
+                <dd>
+                  <p>This methods encapsulates multiple method calls in a single request.
+                    <em>methods</em> is an array of structs. The structs contain two keys:
+                    <code>methodName</code> and <code>params</code>. <code>methodName</code> is the
+                    method name to call and <code>params</code> is array containing parameters to the
+                    method call. This method returns an array of responses. The elements
+                    will be either a one-item array containing the return value of the
+                    method call or a struct of fault element if an encapsulated method call
+                    fails.</p>
+                  <p>In the following examples, we add 2 downloads. The first one is
+                    <code>http://example.org/file</code> and the second one is <code>file.torrent</code>.</p>
+                  <p><strong>JSON-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>urllib2</span><span>,</span> <span>json</span><span>,</span> <span>base64</span>
+                    <span>&gt;&gt;&gt; </span><span>from</span> <span>pprint</span> <span>import</span> <span>pprint</span>
+                    <span>&gt;&gt;&gt; </span><span>jsonreq</span> <span>=</span> <span>json</span><span>.</span><span>dumps</span><span>({</span><span>&#39;jsonrpc&#39;</span><span>:</span><span>&#39;2.0&#39;</span><span>,</span> <span>&#39;id&#39;</span><span>:</span><span>&#39;qwer&#39;</span><span>,</span>
+                    <span>... </span>                      <span>&#39;method&#39;</span><span>:</span><span>&#39;system.multicall&#39;</span><span>,</span>
+                    <span>... </span>                      <span>&#39;params&#39;</span><span>:[[{</span><span>&#39;methodName&#39;</span><span>:</span><span>&#39;aria2.addUri&#39;</span><span>,</span>
+                    <span>... </span>                                  <span>&#39;params&#39;</span><span>:[[</span><span>&#39;http://example.org&#39;</span><span>]]},</span>
+                    <span>... </span>                                 <span>{</span><span>&#39;methodName&#39;</span><span>:</span><span>&#39;aria2.addTorrent&#39;</span><span>,</span>
+                    <span>... </span>                                  <span>&#39;params&#39;</span><span>:[</span><span>base64</span><span>.</span><span>b64encode</span><span>(</span><span>open</span><span>(</span><span>&#39;file.torrent&#39;</span><span>)</span><span>.</span><span>read</span><span>())]}]]})</span>
+                    <span>&gt;&gt;&gt; </span><span>c</span> <span>=</span> <span>urllib2</span><span>.</span><span>urlopen</span><span>(</span><span>&#39;http://localhost:6800/jsonrpc&#39;</span><span>,</span> <span>jsonreq</span><span>)</span>
+                    <span>&gt;&gt;&gt; </span><span>pprint</span><span>(</span><span>json</span><span>.</span><span>loads</span><span>(</span><span>c</span><span>.</span><span>read</span><span>()))</span>
+                    <span>{u&#39;id&#39;: u&#39;qwer&#39;, u&#39;jsonrpc&#39;: u&#39;2.0&#39;, u&#39;result&#39;: [[u&#39;2089b05ecca3d829&#39;], [u&#39;d2703803b52216d1&#39;]]}</span>
+                    </pre>
+                    </div>
+                  </div>
+                  <p>JSON-RPC additionally supports Batch requests as described in the
+                    JSON-RPC 2.0 Specification:</p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>jsonreq</span> <span>=</span> <span>json</span><span>.</span><span>dumps</span><span>([{</span><span>&#39;jsonrpc&#39;</span><span>:</span><span>&#39;2.0&#39;</span><span>,</span> <span>&#39;id&#39;</span><span>:</span><span>&#39;qwer&#39;</span><span>,</span>
+                        <span>... </span>                       <span>&#39;method&#39;</span><span>:</span><span>&#39;aria2.addUri&#39;</span><span>,</span>
+                        <span>... </span>                       <span>&#39;params&#39;</span><span>:[[</span><span>&#39;http://example.org&#39;</span><span>]]},</span>
+                        <span>... </span>                      <span>{</span><span>&#39;jsonrpc&#39;</span><span>:</span><span>&#39;2.0&#39;</span><span>,</span> <span>&#39;id&#39;</span><span>:</span><span>&#39;asdf&#39;</span><span>,</span>
+                        <span>... </span>                       <span>&#39;method&#39;</span><span>:</span><span>&#39;aria2.addTorrent&#39;</span><span>,</span>
+                        <span>... </span>                       <span>&#39;params&#39;</span><span>:[</span><span>base64</span><span>.</span><span>b64encode</span><span>(</span><span>open</span><span>(</span><span>&#39;file.torrent&#39;</span><span>)</span><span>.</span><span>read</span><span>())]}])</span>
+                        <span>&gt;&gt;&gt; </span><span>c</span> <span>=</span> <span>urllib2</span><span>.</span><span>urlopen</span><span>(</span><span>&#39;http://localhost:6800/jsonrpc&#39;</span><span>,</span> <span>jsonreq</span><span>)</span>
+                        <span>&gt;&gt;&gt; </span><span>pprint</span><span>(</span><span>json</span><span>.</span><span>loads</span><span>(</span><span>c</span><span>.</span><span>read</span><span>()))</span>
+                        <span>[{u&#39;id&#39;: u&#39;qwer&#39;, u&#39;jsonrpc&#39;: u&#39;2.0&#39;, u&#39;result&#39;: u&#39;2089b05ecca3d829&#39;},</span>
+                        <span> {u&#39;id&#39;: u&#39;asdf&#39;, u&#39;jsonrpc&#39;: u&#39;2.0&#39;, u&#39;result&#39;: u&#39;d2703803b52216d1&#39;}]</span>
+                        </pre>
+                    </div>
+                  </div>
+                  <p><strong>XML-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>xmlrpclib</span>
+                      <span>&gt;&gt;&gt; </span><span>s</span> <span>=</span> <span>xmlrpclib</span><span>.</span><span>ServerProxy</span><span>(</span><span>&#39;http://localhost:6800/rpc&#39;</span><span>)</span>
+                      <span>&gt;&gt;&gt; </span><span>mc</span> <span>=</span> <span>xmlrpclib</span><span>.</span><span>MultiCall</span><span>(</span><span>s</span><span>)</span>
+                      <span>&gt;&gt;&gt; </span><span>mc</span><span>.</span><span>aria2</span><span>.</span><span>addUri</span><span>([</span><span>&#39;http://example.org/file&#39;</span><span>])</span>
+                      <span>&gt;&gt;&gt; </span><span>mc</span><span>.</span><span>aria2</span><span>.</span><span>addTorrent</span><span>(</span><span>xmlrpclib</span><span>.</span><span>Binary</span><span>(</span><span>open</span><span>(</span><span>&#39;file.torrent&#39;</span><span>,</span> <span>mode</span><span>=</span><span>&#39;rb&#39;</span><span>)</span><span>.</span><span>read</span><span>()))</span>
+                      <span>&gt;&gt;&gt; </span><span>r</span> <span>=</span> <span>mc</span><span>()</span>
+                      <span>&gt;&gt;&gt; </span><span>tuple</span><span>(</span><span>r</span><span>)</span>
+                      <span>(&#39;2089b05ecca3d829&#39;, &#39;d2703803b52216d1&#39;)</span>
+                      </pre>
+                    </div>
+                  </div>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="system.listMethods">
+                  <code>system.</code><code>listMethods</code><span>(</span><span>)</span><a href="#system.listMethods"
+                    title="Permalink to this definition"></a></dt>
+                <dd>
+                  <p>This method returns all the available RPC methods in an array of
+                    string. Unlike other methods, this method does not require secret
+                    token. This is safe because this method just returns the available
+                    method names.</p>
+                  <p><strong>JSON-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>urllib2</span><span>,</span> <span>json</span>
+                        <span>&gt;&gt;&gt; </span><span>from</span> <span>pprint</span> <span>import</span> <span>pprint</span>
+                        <span>&gt;&gt;&gt; </span><span>jsonreq</span> <span>=</span> <span>json</span><span>.</span><span>dumps</span><span>({</span><span>&#39;jsonrpc&#39;</span><span>:</span><span>&#39;2.0&#39;</span><span>,</span> <span>&#39;id&#39;</span><span>:</span><span>&#39;qwer&#39;</span><span>,</span>
+                        <span>... </span>                      <span>&#39;method&#39;</span><span>:</span><span>&#39;system.listMethods&#39;</span><span>})</span>
+                        <span>&gt;&gt;&gt; </span><span>c</span> <span>=</span> <span>urllib2</span><span>.</span><span>urlopen</span><span>(</span><span>&#39;http://localhost:6800/jsonrpc&#39;</span><span>,</span> <span>jsonreq</span><span>)</span>
+                        <span>&gt;&gt;&gt; </span><span>pprint</span><span>(</span><span>json</span><span>.</span><span>loads</span><span>(</span><span>c</span><span>.</span><span>read</span><span>()))</span>
+                        <span>{u&#39;id&#39;: u&#39;qwer&#39;,</span>
+                        <span> u&#39;jsonrpc&#39;: u&#39;2.0&#39;,</span>
+                        <span> u&#39;result&#39;: [u&#39;aria2.addUri&#39;,</span>
+                        <span>             u&#39;aria2.addTorrent&#39;,</span>
+                        <span>...</span>
+                        </pre>
+                    </div>
+                  </div>
+                  <p><strong>XML-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>xmlrpclib</span>
+                      <span>&gt;&gt;&gt; </span><span>s</span> <span>=</span> <span>xmlrpclib</span><span>.</span><span>ServerProxy</span><span>(</span><span>&#39;http://localhost:6800/rpc&#39;</span><span>)</span>
+                      <span>&gt;&gt;&gt; </span><span>s</span><span>.</span><span>system</span><span>.</span><span>listMethods</span><span>()</span>
+                      <span>[&#39;aria2.addUri&#39;, &#39;aria2.addTorrent&#39;, ...</span>
+                      </pre>
+                    </div>
+                  </div>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt id="system.listNotifications">
+                  <code>system.</code><code>listNotifications</code><span>(</span><span>)</span><a href="#system.listNotifications"
+                    title="Permalink to this definition"></a></dt>
+                <dd>
+                  <p>This method returns all the available RPC notifications in an array of
+                    string. Unlike other methods, this method does not require secret
+                    token. This is safe because this method just returns the available
+                    notifications names.</p>
+                  <p><strong>JSON-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>urllib2</span><span>,</span> <span>json</span>
+                      <span>&gt;&gt;&gt; </span><span>from</span> <span>pprint</span> <span>import</span> <span>pprint</span>
+                      <span>&gt;&gt;&gt; </span><span>jsonreq</span> <span>=</span> <span>json</span><span>.</span><span>dumps</span><span>({</span><span>&#39;jsonrpc&#39;</span><span>:</span><span>&#39;2.0&#39;</span><span>,</span> <span>&#39;id&#39;</span><span>:</span><span>&#39;qwer&#39;</span><span>,</span>
+                      <span>... </span>                      <span>&#39;method&#39;</span><span>:</span><span>&#39;system.listNotifications&#39;</span><span>})</span>
+                      <span>&gt;&gt;&gt; </span><span>c</span> <span>=</span> <span>urllib2</span><span>.</span><span>urlopen</span><span>(</span><span>&#39;http://localhost:6800/jsonrpc&#39;</span><span>,</span> <span>jsonreq</span><span>)</span>
+                      <span>&gt;&gt;&gt; </span><span>pprint</span><span>(</span><span>json</span><span>.</span><span>loads</span><span>(</span><span>c</span><span>.</span><span>read</span><span>()))</span>
+                      <span>{u&#39;id&#39;: u&#39;qwer&#39;,</span>
+                      <span> u&#39;jsonrpc&#39;: u&#39;2.0&#39;,</span>
+                      <span> u&#39;result&#39;: [u&#39;aria2.onDownloadStart&#39;,</span>
+                      <span>             u&#39;aria2.onDownloadPause&#39;,</span>
+                      <span>...</span>
+                      </pre>
+                    </div>
+                  </div>
+                  <p><strong>XML-RPC Example</strong></p>
+                  <div>
+                    <div>
+                      <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>xmlrpclib</span>
+                      <span>&gt;&gt;&gt; </span><span>s</span> <span>=</span> <span>xmlrpclib</span><span>.</span><span>ServerProxy</span><span>(</span><span>&#39;http://localhost:6800/rpc&#39;</span><span>)</span>
+                      <span>&gt;&gt;&gt; </span><span>s</span><span>.</span><span>system</span><span>.</span><span>listNotifications</span><span>()</span>
+                      <span>[&#39;aria2.onDownloadStart&#39;, &#39;aria2.onDownloadPause&#39;, ...</span>
+                      </pre>
+                    </div>
+                  </div>
+                </dd>
+              </dl>
+
+            </div>
+            <div id="error-handling">
+              <h3>错误处理</h3>
+              <p>Over JSON-RPC, aria2 returns a JSON object which contains an error code in
+                <code>code</code> and the error message in <code>message</code>.</p>
+              <p>Over XML-RPC, aria2 returns <code>faultCode=1</code> and the error message in
+                <code>faultString</code>.</p>
+            </div>
+            <div id="id3">
+              <h3>配置</h3>
+              <p>The same options as for <a href="#cmdoption-i"><code>--input-file</code></a> are available. See the
+                <a href="#id2">Input File</a> subsection for a complete list of options.</p>
+              <p>In the option struct, the name element is the option name (without the preceding
+                <code>--</code>) and the value element is the argument as a string.</p>
+              <div id="json-rpc-example">
+                <h4>JSON-RPC Example</h4>
+                <div>
+                  <div>
+                    <pre><span></span><span>{</span><span>&#39;split&#39;</span><span>:</span><span>&#39;1&#39;</span><span>,</span> <span>&#39;http-proxy&#39;</span><span>:</span><span>&#39;http://proxy/&#39;</span><span>}</span>
+                    </pre>
+                  </div>
+                </div>
+              </div>
+              <div id="xml-rpc-example">
+                <h4>XML-RPC Example</h4>
+                <div>
+                  <div>
+                    <pre><span></span><span>&lt;struct&gt;</span>
+                      <span>&lt;member&gt;</span>
+                        <span>&lt;name&gt;</span>split<span>&lt;/name&gt;</span>
+                        <span>&lt;value&gt;&lt;string&gt;</span>1<span>&lt;/string&gt;&lt;/value&gt;</span>
+                      <span>&lt;/member&gt;</span>
+                      <span>&lt;member&gt;</span>
+                        <span>&lt;name&gt;</span>http-proxy<span>&lt;/name&gt;</span>
+                        <span>&lt;value&gt;&lt;string&gt;</span>http://proxy/<span>&lt;/string&gt;&lt;/value&gt;</span>
+                      <span>&lt;/member&gt;</span>
+                    <span>&lt;/struct&gt;</span>
+                    </pre>
+                  </div>
+                </div>
+                <p>The <a href="#cmdoption-header"><code>header</code></a> and <a href="#cmdoption-index-out"><code
+                     ><span>index-out</code></a>
+                  options are allowed multiple times on the command-line. Since the name should be
+                  unique in a struct (many XML-RPC library implementations use a hash or dict for
+                  struct), a single string is not enough. To overcome this limitation, you may use
+                  an array as the value as well as a string.</p>
+              </div>
+              <div id="id5">
+                <h4>JSON-RPC Example</h4>
+                <div>
+                  <div>
+                    <pre><span></span><span>{</span><span>&#39;header&#39;</span><span>:[</span><span>&#39;Accept-Language: ja&#39;</span><span>,</span> <span>&#39;Accept-Charset: utf-8&#39;</span><span>]}</span>
+                    </pre>
+                  </div>
+                </div>
+              </div>
+              <div id="id6">
+                <h4>XML-RPC Example</h4>
+                <div>
+                  <div>
+                    <pre><span></span><span>&lt;struct&gt;</span>
+                      <span>&lt;member&gt;</span>
+                        <span>&lt;name&gt;</span>header<span>&lt;/name&gt;</span>
+                        <span>&lt;value&gt;</span>
+                          <span>&lt;array&gt;</span>
+                            <span>&lt;data&gt;</span>
+                              <span>&lt;value&gt;&lt;string&gt;</span>Accept-Language: ja<span>&lt;/string&gt;&lt;/value&gt;</span>
+                              <span>&lt;value&gt;&lt;string&gt;</span>Accept-Charset: utf-8<span>&lt;/string&gt;&lt;/value&gt;</span>
+                            <span>&lt;/data&gt;</span>
+                          <span>&lt;/array&gt;</span>
+                        <span>&lt;/value&gt;</span>
+                      <span>&lt;/member&gt;</span>
+                    <span>&lt;/struct&gt;</span>
+                    </pre>
+                  </div>
+                </div>
+                <p>The following example adds a download with two options: <code>dir</code> and <code>header</code>.
+                  The <code>header</code> option requires two values, so it uses a list:</p>
+                <div>
+                  <div>
+                    <pre><span></span><span>&gt;&gt;&gt; </span><span>import</span> <span>xmlrpclib</span>
+                    <span>&gt;&gt;&gt; </span><span>s</span> <span>=</span> <span>xmlrpclib</span><span>.</span><span>ServerProxy</span><span>(</span><span>&#39;http://localhost:6800/rpc&#39;</span><span>)</span>
+                    <span>&gt;&gt;&gt; </span><span>opts</span> <span>=</span> <span>dict</span><span>(</span><span>dir</span><span>=</span><span>&#39;/tmp&#39;</span><span>,</span>
+                    <span>... </span>            <span>header</span><span>=</span><span>[</span><span>&#39;Accept-Language: ja&#39;</span><span>,</span>
+                    <span>... </span>                    <span>&#39;Accept-Charset: utf-8&#39;</span><span>])</span>
+                    <span>&gt;&gt;&gt; </span><span>s</span><span>.</span><span>aria2</span><span>.</span><span>addUri</span><span>([</span><span>&#39;http://example.org/file&#39;</span><span>],</span> <span>opts</span><span>)</span>
+                    <span>&#39;1&#39;</span>
+                    </pre>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="json-rpc-using-http-get">
+              <h3>基于 HTTP GET 的 JSON-RPC</h3>
+              <p>The JSON-RPC interface also supports requests via HTTP GET.
+                The encoding scheme in GET parameters is based on JSON-RPC over HTTP Specification [2008-1-15(RC1)].
+                The encoding of GET parameters are follows:</p>
+              <div>
+                <div>
+                  <pre><span></span>/jsonrpc?method=METHOD_NAME&amp;id=ID&amp;params=BASE64_ENCODED_PARAMS
+                  </pre>
+                </div>
+              </div>
+              <p>The <code>method</code> and <code>id</code> are always treated as JSON string and their
+                encoding must be UTF-8.</p>
+              <p>For example, The encoded string of
+                <code>aria2.tellStatus('2089b05ecca3d829')</code> with <code>id='foo'</code> looks like
+                this:</p>
+              <div>
+                <div>
+                  <pre><span></span>/jsonrpc?method=aria2.tellStatus&amp;id=foo&amp;params=WyIyMDg5YjA1ZWNjYTNkODI5Il0%3D
+                  </pre>
+                </div>
+              </div>
+              <p>The <code>params</code> parameter is Base64-encoded JSON array which usually
+                appears in <code>params</code> attribute in JSON-RPC request object. In the
+                above example, the params is <code>[&quot;2089b05ecca3d829&quot;]</code>, therefore:</p>
+              <div>
+                <div>
+                  <pre><span></span><span>[</span><span>&quot;2089b05ecca3d829&quot;</span><span>]</span> <span>--</span><span>(</span><span>Base64</span><span>)</span><span>--&gt;</span> <span>WyIyMDg5YjA1ZWNjYTNkODI5Il0</span><span>=</span>
+               <span>--</span><span>(</span><span>Percent</span> <span>Encode</span><span>)</span><span>--&gt;</span> <span>WyIyMDg5YjA1ZWNjYTNkODI5Il0</span><span>%</span><span>3</span><span>D</span>
+             </pre>
+                </div>
+              </div>
+              <p>The JSON-RPC interface also supports JSONP. You can specify the callback
+                function in the <code>jsoncallback</code> parameter:</p>
+              <div>
+                <div>
+                  <pre><span></span>/jsonrpc?method=aria2.tellStatus&amp;id=foo&amp;params=WyIyMDg5YjA1ZWNjYTNkODI5Il0%3D&amp;jsoncallback=cb
+                  </pre>
+                </div>
+              </div>
+              <p>For Batch requests, the <code>method</code> and <code>id</code> parameters must not be specified.
+                The whole request must be specified in the <code>params</code> parameter. For example,
+                a Batch request:</p>
+              <div>
+                <div>
+                  <pre><span></span><span>[{</span><span>&#39;jsonrpc&#39;</span><span>:</span><span>&#39;2.0&#39;</span><span>,</span> <span>&#39;id&#39;</span><span>:</span><span>&#39;qwer&#39;</span><span>,</span> <span>&#39;method&#39;</span><span>:</span><span>&#39;aria2.getVersion&#39;</span><span>},</span>
+                      <span>{</span><span>&#39;jsonrpc&#39;</span><span>:</span><span>&#39;2.0&#39;</span><span>,</span> <span>&#39;id&#39;</span><span>:</span><span>&#39;asdf&#39;</span><span>,</span> <span>&#39;method&#39;</span><span>:</span><span>&#39;aria2.tellActive&#39;</span><span>}]</span>
+                    </pre>
+                </div>
+              </div>
+              <p>must be encoded like this:</p>
+              <div>
+                <div>
+                  <pre><span></span>/jsonrpc?params=W3sianNvbnJwYyI6ICIyLjAiLCAiaWQiOiAicXdlciIsICJtZXRob2QiOiAiYXJpYTIuZ2V0VmVyc2lvbiJ9LCB7Impzb25ycGMiOiAiMi4wIiwgImlkIjogImFzZGYiLCAibWV0aG9kIjogImFyaWEyLnRlbGxBY3RpdmUifV0%3D
+                  </pre>
+                </div>
+              </div>
+            </div>
+            <div id="json-rpc-over-websocket">
+              <h3>基于 WebSocket 的 JSON-RPC</h3>
+              <p>JSON-RPC over WebSocket uses same method signatures and response
+                format as JSON-RPC over HTTP. The supported WebSocket version is 13
+                which is detailed in <span id="index-0"></span><a href="https://tools.ietf.org/html/rfc6455.html"><strong>RFC 6455</strong></a>.</p>
+              <p>To send a RPC request to the RPC server, send a serialized JSON string
+                in a Text frame. The response from the RPC server is delivered also in
+                a Text frame.</p>
+              <div id="notifications">
+                <h4>Notifications</h4>
+                <p>The RPC server might send notifications to the client. Notifications is
+                  unidirectional, therefore the client which receives the notification must not
+                  respond to it. The method signature of a notification is much like a normal
+                  method request but lacks the id key. The value of the params key is the data
+                  which this notification carries. The format of the value varies depending on the
+                  notification method. Following notification methods are defined.</p>
+                <dl>
+                  <dt id="aria2.onDownloadStart">
+                    <code>aria2.</code><code>onDownloadStart</code><span>(</span><em>event</em><span>)</span><a href="#aria2.onDownloadStart"
+                      title="Permalink to this definition"></a></dt>
+                  <dd>
+                    <p>This notification will be sent when a download is started.
+                      The <em>event</em> is of type struct and it contains following keys.
+                      The value type is string.</p>
+                    <dl>
+                      <dt><code>gid</code></dt>
+                      <dd>GID of the download.</dd>
+                    </dl>
+                  </dd>
+                </dl>
+
+                <dl>
+                  <dt id="aria2.onDownloadPause">
+                    <code>aria2.</code><code>onDownloadPause</code><span>(</span><em>event</em><span>)</span><a href="#aria2.onDownloadPause"
+                      title="Permalink to this definition"></a></dt>
+                  <dd>
+                    <p>This notification will be sent when a download is paused. The <em>event</em>
+                      is the same struct as the <em>event</em> argument of
+                      <a href="#aria2.onDownloadStart" title="aria2.onDownloadStart"><code>aria2.onDownloadStart()</code></a> method.</p>
+                  </dd>
+                </dl>
+
+                <dl>
+                  <dt id="aria2.onDownloadStop">
+                    <code>aria2.</code><code>onDownloadStop</code><span>(</span><em>event</em><span>)</span><a href="#aria2.onDownloadStop"
+                      title="Permalink to this definition"></a></dt>
+                  <dd>
+                    <p>This notification will be sent when a download is stopped by the user.
+                      The <em>event</em> is the same struct as the <em>event</em> argument of
+                      <a href="#aria2.onDownloadStart" title="aria2.onDownloadStart"><code>aria2.onDownloadStart()</code></a> method.</p>
+                  </dd>
+                </dl>
+
+                <dl>
+                  <dt id="aria2.onDownloadComplete">
+                    <code>aria2.</code><code>onDownloadComplete</code><span>(</span><em>event</em><span>)</span><a href="#aria2.onDownloadComplete"
+                      title="Permalink to this definition"></a></dt>
+                  <dd>
+                    <p>This notification will be sent when a download is complete. For
+                      BitTorrent downloads, this notification is sent when the download is
+                      complete and seeding is over. The <em>event</em> is the same struct of the
+                      <em>event</em> argument of
+                      <a href="#aria2.onDownloadStart" title="aria2.onDownloadStart"><code>aria2.onDownloadStart()</code></a> method.</p>
+                  </dd>
+                </dl>
+
+                <dl>
+                  <dt id="aria2.onDownloadError">
+                    <code>aria2.</code><code>onDownloadError</code><span>(</span><em>event</em><span>)</span><a href="#aria2.onDownloadError"
+                      title="Permalink to this definition"></a></dt>
+                  <dd>
+                    <p>This notification will be sent when a download is stopped due to an error.
+                      The <em>event</em> is the same struct as the <em>event</em> argument of
+                      <a href="#aria2.onDownloadStart" title="aria2.onDownloadStart"><code>aria2.onDownloadStart()</code></a> method.</p>
+                  </dd>
+                </dl>
+
+                <dl>
+                  <dt id="aria2.onBtDownloadComplete">
+                    <code>aria2.</code><code>onBtDownloadComplete</code><span>(</span><em>event</em><span>)</span><a href="#aria2.onBtDownloadComplete"
+                      title="Permalink to this definition"></a></dt>
+                  <dd>
+                    <p>This notification will be sent when a torrent download is complete but seeding
+                      is still going on. The <em>event</em> is the same struct as the <em>event</em> argument of
+                      <a href="#aria2.onDownloadStart" title="aria2.onDownloadStart"><code>aria2.onDownloadStart()</code></a> method.</p>
+                  </dd>
+                </dl>
+
+              </div>
+            </div>
+            <div id="sample-xml-rpc-client-code">
+              <h3>简易 XML-RPC 客户端</h3>
+              <p>The following Ruby script adds <code>http://localhost/aria2.tar.bz2</code> to
+                aria2c (running on localhost) with option <a href="#cmdoption-d"><code>--dir=/downloads</code></a> and
+                prints the RPC response:</p>
+              <div>
+                <div>
+                  <pre><span></span><span>#!/usr/bin/env ruby</span>
+
+                  <span>require</span> <span>&#39;xmlrpc/client&#39;</span>
+                  <span>require</span> <span>&#39;pp&#39;</span>
+
+                  <span>client</span><span>=</span><span>XMLRPC</span><span>::</span><span>Client</span><span>.</span><span>new2</span><span>(</span><span>&quot;http://localhost:6800/rpc&quot;</span><span>)</span>
+
+                  <span>options</span><span>=</span><span>{</span> <span>&quot;dir&quot;</span> <span>=&gt;</span> <span>&quot;/downloads&quot;</span> <span>}</span>
+                  <span>result</span><span>=</span><span>client</span><span>.</span><span>call</span><span>(</span><span>&quot;aria2.addUri&quot;</span><span>,</span> <span>[</span> <span>&quot;http://localhost/aria2.tar.bz2&quot;</span> <span>]</span><span>,</span> <span>options</span><span>)</span>
+
+                  <span>pp</span> <span>result</span>
+                  </pre>
+                </div>
+              </div>
+              <p>If you are a Python lover, you can use xmlrpclib (Python3 uses
+                xmlrpc.client instead) to interact with aria2:</p>
+              <div>
+                <div>
+                  <pre><span></span><span>import</span> <span>xmlrpclib</span>
+                  <span>from</span> <span>pprint</span> <span>import</span> <span>pprint</span>
+
+                  <span>s</span> <span>=</span> <span>xmlrpclib</span><span>.</span><span>ServerProxy</span><span>(</span><span>&quot;http://localhost:6800/rpc&quot;</span><span>)</span>
+                  <span>r</span> <span>=</span> <span>s</span><span>.</span><span>aria2</span><span>.</span><span>addUri</span><span>([</span><span>&quot;http://localhost/aria2.tar.bz2&quot;</span><span>],</span> <span>{</span><span>&quot;dir&quot;</span><span>:</span><span>&quot;/downloads&quot;</span><span>})</span>
+                  <span>pprint</span><span>(</span><span>r</span><span>)</span>
+                  </pre>
+                </div>
+              </div>
+            </div>
+          </div>
+
+
+
+
+        </el-main>
+      </el-container>
+
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/element-ui/lib/index.js"></script>
+    <script type="text/javascript">
+    var app = new Vue({
+      el: '#app',
+      data: {
+        ph:document.documentElement.clientHeight,
+        pw:document.documentElement.clientWidth,
+        ch:'auto',
+      },
+      mounted:function(){
+        if(this.pw>1200) this.ch=this.ph+'px';
+      },
+      methods:{
+
+      }
+    })
+    </script>
+  </body>
+</html>

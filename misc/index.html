@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+  <head>
+    <meta charset="utf-8">
+    <title>MISC_Aria2_用户手册_Tun6</title>
+    <meta name="keywords" content="Aria2,配置,设置,中文,文档,手册,说明,API,"/>
+    <meta name="description" content="Aria2是一个轻量级的、支持多种协议的跨平台命令行下载工具。同时支持HTTP(S)、FTP、SFTP、BitTorrent和Metalink协议。">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-ui/lib/theme-chalk/index.css">
+    <link rel="stylesheet" href="../common.css">
+    <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?d5f982237a80a8b72feeaa6caac3f4fc";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+  </head>
+  <body>
+    <div id="app" class="page">
+      <el-container v-bind:style="{height: ch}">
+        <el-aside>
+          <h1>Aria2中文说明文档</h1>
+
+          <h3>文档大纲</h3>
+          <ul>
+            <li><a href="../">基本用法</a></li>
+            <li><a href="../options/">配置</a></li>
+            <li><a href="../exit_status/">结束状态</a></li>
+            <li><a href="../environment/">环境</a></li>
+            <li><a href="../files/">文件</a></li>
+            <li><a href="../rpc_interface/">RPC调用</a></li>
+            <li>MISC</li>
+            <li><a href="../example/">例子</a></li>
+          </ul>
+        </el-aside>
+        <el-main>
+          <el-alert
+            title="须知"
+            type="warning"
+            :closable="false"
+            show-icon>
+            本文档并未完全翻译完成，我需要你的帮助。<a href="https://github.com/tun6-com/manual-Aria2" target="_blank">前往GitHub编辑</a>。
+          </el-alert>
+
+          <div id="misc">
+            <h2>MISC</h2>
+            <div id="console-readout">
+              <h3>Console Readout</h3>
+              <p>While downloading files, aria2 prints a readout to the console to show the
+                progress of the downloads. The console readout looks like this:</p>
+              <div>
+                <div>
+                  <pre><span>[</span><span>#2089b0 400.0KiB/33.2MiB(1%) CN:1 DL:115.7KiB ETA:4m51s]</span>
+                  </pre>
+                </div>
+              </div>
+              <p>This section describes what these numbers and strings mean.</p>
+              <dl>
+                <dt><code>#NNNNNN</code></dt>
+                <dd>The first 6 characters of the GID as a hex string. The GID is an unique ID for
+                  each download, internal to aria2. The GID is particularly useful when
+                  interacting with aria2 using the RPC interface.</dd>
+                <dt><code>X/Y(Z%)</code></dt>
+                <dd>Completed length, the total file length and its progress. If
+                  <a href="#cmdoption-select-file"><code>--select-file</code></a> is used, this is the sum of selected files.</dd>
+                <dt><code>SEED</code></dt>
+                <dd>Share ratio when the aria2 is seeding a finished torrent.</dd>
+                <dt><code>CN</code></dt>
+                <dd>The number of connections aria2 has established.</dd>
+                <dt><code>SD</code></dt>
+                <dd>The number of seeders aria2 is connected to.</dd>
+                <dt><code>DL</code></dt>
+                <dd>Download speed (bytes per second).</dd>
+                <dt><code>UL</code></dt>
+                <dd>Upload speed (bytes per second) and the number of uploaded bytes.</dd>
+                <dt><code>ETA</code></dt>
+                <dd>Expected time to finish the download.</dd>
+              </dl>
+              <p>When more than one download is in progress, some of the information
+                described above will be omitted in order to show information for several
+                downloads. And the overall download and upload speeds are shown at
+                the beginning of the line.</p>
+              <p>When aria2 is allocating file space or validating checksums, it
+                additionally prints the progress of these operations:</p>
+              <dl>
+                <dt>FileAlloc</dt>
+                <dd>GID, already allocated length and total length in bytes.</dd>
+                <dt>Checksum</dt>
+                <dd>GID, already validated length and total length in bytes.</dd>
+              </dl>
+            </div>
+          </div>
+
+
+
+
+        </el-main>
+      </el-container>
+
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/element-ui/lib/index.js"></script>
+    <script type="text/javascript">
+    var app = new Vue({
+      el: '#app',
+      data: {
+        ph:document.documentElement.clientHeight,
+        pw:document.documentElement.clientWidth,
+        ch:'auto',
+      },
+      mounted:function(){
+        if(this.pw>1200) this.ch=this.ph+'px';
+      },
+      methods:{
+
+      }
+    })
+    </script>
+  </body>
+</html>
