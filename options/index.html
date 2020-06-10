@@ -65,8 +65,7 @@
             <h2>配置</h2>
             <div>
               <p>注意</p>
-              <p>Most FTP related options are applicable to SFTP as well.
-                Some options are not effective against SFTP (e.g., <a href="#cmdoption-p"><code>--ftp-pasv</code></a>)</p>
+              <p>大部分 FTP 参数对 SFTP 同样适用，只有少部分参数例外（例如 <a href="#cmdoption-p"><code>--ftp-pasv</code></a>）。</p>
             </div>
             <div id="basic-options">
               <h3>基本</h3>
@@ -74,7 +73,7 @@
                 <dt id="cmdoption-d">
                   <code>-d</code><code></code><code>, </code><code>--dir</code><code>=&lt;DIR&gt;</code></dt>
                 <dd>
-                  <p>The directory to store the downloaded file.</p>
+                  <p>下载目录。</p>
                 </dd>
               </dl>
 
@@ -82,17 +81,14 @@
                 <dt id="cmdoption-i">
                   <code>-i</code><code></code><code>, </code><code>--input-file</code><code>=&lt;FILE&gt;</code><a href="#cmdoption-i" title="Permalink to this definition"></a></dt>
                 <dd>
-                  <p>Downloads the URIs listed in <code>FILE</code>. You can specify multiple sources for a
-                    single entity by putting multiple URIs on a single line separated by the
-                    <kbd>TAB</kbd> character.
-                    Additionally, options can be specified after each URI line. Option lines
-                    must start with one or more white space characters (<kbd>SPACE</kbd> or <kbd>TAB</kbd>)
-                    and must only contain one option per line.
-                    Input files can use gzip compression.
-                    When <code>FILE</code> is specified as <code>-</code>, aria2 will read the input from <code><span>stdin</code>.
-                    See the <a href="#id2">Input File</a> subsection for details.
-                    See also the <a href="#cmdoption-deferred-input"><code>--deferred-input</code></a> option.
-                    See also the <a href="#cmdoption-save-session"><code>--save-session</code></a> option.</p>
+                  <p>下载 <code>FILE</code> 中的所有 URI。<br/>
+                    把多个 URI 放在同一行，并使用 <kbd>TAB</kbd> 分割，可以为下载对象设置多个源。<br/>
+                    也可以为每个 URI 增加配置，配置行必须以空白符（<kbd>SPACE</kbd> 或 <kbd>TAB</kbd>）开始，并且每行只能包含一个配置。<br/>
+                    <code>FILE</code> 可以使用 gzip 压缩。<br/>
+                    当 <code>FILE</code> 是 <code>-</code> 时，aria2 使用 <code><span>stdin</code> 方式读取。<br/>
+                    参考 <a href="../files/#input-file">Input File</a>，
+                    参考 <a href="#cmdoption-deferred-input"><code>--deferred-input</code></a> 选项，
+                    参考 <a href="#cmdoption-save-session"><code>--save-session</code></a> 选项。</p>
                 </dd>
               </dl>
 
@@ -101,9 +97,9 @@
                   <code>-l</code><code></code><code>, </code><code>--log</code><code>=&lt;LOG&gt;</code><a href="#cmdoption-l"
                     title="Permalink to this definition"></a></dt>
                 <dd>
-                  <p>The file name of the log file. If <code>-</code> is specified, log is written to
-                    <code>stdout</code>. If empty string(&quot;&quot;) is specified, or this option is omitted,
-                    no log is written to disk at all.</p>
+                  <p>日志文件的名字。<br/>
+                    当是 <code>-</code> 时，日志将输出到 <code>stdout</code>。<br/>
+                    当是空字符串（&quot;&quot;），或没有配置该选项时，将不会写任何的日志。</p>
                 </dd>
               </dl>
 
@@ -111,28 +107,25 @@
                 <dt id="cmdoption-j">
                   <code>-j</code><code></code><code>, </code><code>--max-concurrent-downloads</code><code>=&lt;N&gt;</code></dt>
                 <dd>
-                  <p>Set the maximum number of parallel downloads for every queue item.
-                    See also the <a href="#cmdoption-s"><code>--split</code></a> option.
-                    Default: <code>5</code></p>
+                  <p>最多同时下载的任务数。<br/>
+                    参考 <a href="#cmdoption-s"><code>--split</code></a> 配置。<br/>
+                    默认 <code>5</code>。</p>
                   <div>
                     <p>注意</p>
-                    <p><a href="#cmdoption-j"><code>--max-concurrent-downloads</code></a> limits the number of items
-                      which are downloaded concurrently. <a href="#cmdoption-s"><code>--split</code></a> and
-                      <a href="#cmdoption-k"><code>--min-split-size</code></a> affect the number of connections
-                      inside each item. Imagine that you have an input file (see
-                      <a href="#cmdoption-i"><code>--input-file</code></a> option) like this:</p>
+                    <p><a href="#cmdoption-j"><code>--max-concurrent-downloads</code></a> 限制当前同时下载的任务数。<br/>
+                      <a href="#cmdoption-s"><code>--split</code></a> 和 <a href="#cmdoption-k"><code>--min-split-size</code></a> 限制每个下载任务的连接数。<br/>
+                      假如你有一个输入文件（使用 <a href="#cmdoption-i"><code>--input-file</code></a> 配置）：</p>
                     <div>
                       <div>
-                        <pre><span></span>http://example.com/foo
-                        http://example.com/bar
+                        <pre>
+http://example.com/foo
+http://example.com/bar
                         </pre>
                       </div>
                     </div>
-                    <p>Here is 2 download items. aria2 can download these items
-                      concurrently if the value more than or equal 2 is given to
-                      <a href="#cmdoption-j"><code>--max-concurrent-downloads</code></a>. In each download item, you
-                      can configure the number of connections using <a href="#cmdoption-s"><code>--split</code></a> and/or <a
-                        href="#cmdoption-k"><code>--min-split-size</code></a>, etc.</p>
+                    <p>这是两个下载任务。<br/>
+                      当 <a href="#cmdoption-j"><code>--max-concurrent-downloads</code></a> 配置大于或等于 2 时，aria2 可以同时下载这两个任务。<br/>
+                      在每个下载任务中，可以使用 <a href="#cmdoption-s"><code>--split</code></a> 和 / 或 <a href="#cmdoption-k"><code>--min-split-size</code></a> 来设置使用的链接数。</p>
                   </div>
                 </dd>
               </dl>
@@ -141,17 +134,14 @@
                 <dt id="cmdoption-v">
                   <code>-V</code><code></code><code>, </code><code>--check-integrity</code><code> [true|false]</code></dt>
                 <dd>
-                  <p>Check file integrity by validating piece hashes or a hash of entire
-                    file. This option has effect only in BitTorrent, Metalink downloads
-                    with checksums or HTTP(S)/FTP downloads with
-                    <a href="#cmdoption-checksum"><code>--checksum</code></a> option. If
-                    piece hashes are provided, this option can detect damaged portions
-                    of a file and re-download them. If a hash of entire file is
-                    provided, hash check is only done when file has been already
-                    download. This is determined by file length. If hash check fails,
-                    file is re-downloaded from scratch. If both piece hashes and a hash
-                    of entire file are provided, only piece hashes are used. Default:
-                    <code>false</code></p>
+                  <p>通过检查片的 hash 或整个文件的 hash 来校验下载文件的完整性。<br/>
+                    该选项只对 BitTorrent 下载任务有效，Metalink 和 HTTP(S)/FTP 下载任务需使用 <a href="#cmdoption-checksum"><code>--checksum</code></a> 选项。<br/>
+                    如果返回片的 hash，可以重新单独下载损坏的片。<br/>
+                    如果返回整个文件的 hash，只会在下载完成后校验 hash。<br/>
+                    是否分片取决于文件的大小。<br/>
+                    如果 hash 校验失败，文件从断裂处重新下载。<br/>
+                    如果同时返回了整个文件的 hash 和每个片的 hash，使用片的 hash。<br/>
+                    默认 <code>false</code>。</p>
                 </dd>
               </dl>
 
@@ -160,10 +150,8 @@
                   <code>-c</code><code></code><code>, </code><code>--continue</code><code> [true|false]</code><a href="#cmdoption-c"
                     title="Permalink to this definition"></a></dt>
                 <dd>
-                  <p>Continue downloading a partially downloaded file.
-                    Use this option to resume a download started by a web browser or another
-                    program which downloads files sequentially from the beginning.
-                    Currently this option is only applicable to HTTP(S)/FTP downloads.</p>
+                  <p>继续下载文件的剩余部分。<br/>
+                    目前只对 HTTP(S)/FTP 下载任务有效。</p>
                 </dd>
               </dl>
 
@@ -171,18 +159,14 @@
                 <dt id="cmdoption-h">
                   <code>-h</code><code></code><code>, </code><code>--help[</code><code>=&lt;TAG&gt;|&lt;KEYWORD&gt;]</code></dt>
                 <dd>
-                  <p>The help messages are classified with tags. A tag starts with
-                    <code>#</code>. For example, type <code>--help=#http</code> to get the usage for the
-                    options tagged with <code>#http</code>. If non-tag word is given, print the
-                    usage for the options whose name includes that word. Available
-                    Values: <code>#basic</code>, <code>#advanced</code>, <code><span
-                       >#http</code>, <code>#https</code>, <code>#ftp</code>,
-                    <code>#metalink</code>, <code>#bittorrent</code>, <code><span
-                       >#cookie</code>, <code>#hook</code>, <code>#file</code>, <code
-                     ><span>#rpc</code>,
-                    <code>#checksum</code>, <code>#experimental</code>, <code><span
-                       >#deprecated</code>, <code>#help</code>, <code>#all</code>
-                    Default: <code>#basic</code></p>
+                  <p>帮助信息使用标签分类。<br/>
+                    标签由 <code>#</code> 开头。<br/>
+                    例如，输入 <code>--help=#http</code> 来获取 <code>#http</code> 相关的配置用法。<br/>
+                    如果表情不以 <code>#</code> 开头，获取与输入字符匹配的配置。<br/>
+                    可用值有：<code>#basic</code>、<code>#advanced</code>，<code><span>#http</code>，<code>#https</code>，<code>#ftp</code>，
+                    <code>#metalink</code>，<code>#bittorrent</code>，<code><span>#cookie</code>，<code>#hook</code>，<code>#file</code>，
+                    <code><span>#rpc</code>，<code>#checksum</code>，<code>#experimental</code>，<code><span>#deprecated</code>，<code>#help</code>，<code>#all</code>。<br/>
+                    默认 <code>#basic</code>。</p>
                 </dd>
               </dl>
 
